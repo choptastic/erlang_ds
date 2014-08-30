@@ -79,6 +79,18 @@ boolize(PL,Keys) ->
 		end
 	end).
 
+%% DateFormat can be date, unixtime, or a binary/string formatted for use with qdate, or any other term registered as a format with qdate
+%% Requires qdate installed.
+%% If DateFormat cannot be handled, will instead 
+format_date(PL, Keys, DateFormat) ->
+	UpdateFun = case DateFormat of
+		unixtime -> fun(D) -> try qdate:to_unixtime(D) catch _:_ -> 0 end end;
+		date -> fun(D) -> try qdate:to_date(D) catch _:_ -> {{1970,1,1},{0,0,0}} end end;
+		now -> fun(D) -> try qdate:to_now(D) catch _:_ -> {0,0,0} end end;
+		Format -> fun(D) -> try qdate:to_string(Format, D) catch _:_ -> "Invalid Format" end end
+	end,
+	update(PL, Keys, UpdateFun).
+
 atomize(PL,Keys) ->
 	update(PL,Keys,fun
 		(V) when is_list(V) -> list_to_atom(V);
@@ -88,18 +100,29 @@ atomize(PL,Keys) ->
 		(V) -> throw({cannot_convert_to_atom,V})
 	end).
 
+
+transform(PL,{date, Keys}) ->
+	format_date(PL, Keys, date);
+transform(PL,{unixtime, Keys}) ->
+	format_date(PL, Keys, unixtime);
+transform(PL,{now, Keys}) ->
+	format_date(PL, Keys, now);
+transform(PL,{{date,DateFormat}, Keys}) ->
+	format_date(PL, Keys, DateFormat);
+
 transform(PL,{boolize,Keys}) ->
 	boolize(PL,Keys);
 transform(PL,{atomize,Keys}) ->
 	atomize(PL,Keys);
 transform(PL,{Fun,Keys}) when is_function(Fun) ->
 	update(PL,Keys,Fun);
+transform(PL,{DateFormat, Keys}) ->
+	format_date(PL, Keys, DateFormat);
 
 transform(PL,Map) when is_list(Map) ->
 	lists:foldl(fun(Action,Acc) ->
 		transform(Acc,Action)
 	end,PL,Map).
-	
 
 map(PL,Fun) ->
 	[{Key,Fun(Val)} || {Key,Val} <- PL].	
