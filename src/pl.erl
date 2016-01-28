@@ -144,6 +144,8 @@ rekey_swapkey(Current,KeyMap) ->
 
 
 % TODO: improve performance by only traversing main list once. Fast enough for now
+delete_list(PL, []) ->
+	PL;
 delete_list(PL,[Key|RestKeys]) ->
 	NewPL = delete(PL,Key),
 	delete_list(NewPL,RestKeys).
