@@ -71,6 +71,7 @@ update(PL,Key,FormatFun) ->
 boolize(PL,Keys) ->
 	update(PL,Keys,fun(V) ->
 		if
+            V==false;
 			V==0;
 			V=="0";
 			V==undefined;
