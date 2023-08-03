@@ -29,47 +29,47 @@
 % delete keys with delete(Proplist,Key)
 
 
-set(PL,Key,Val) ->
-	set(PL,{Key,Val}).
+set(Obj,Key,Val) ->
+	set(Obj,{Key,Val}).
 
-set(PL,{Key,Val}) ->
+set(Obj,{Key,Val}) ->
 	% delete a matching key if exists and prepend {K,V} to the list. No guarantee of proplist order
-	[{Key,Val} | delete(PL,Key)];
-set(PL,[]) ->
-	PL;
-set(PL,[{Key,Val} | Rest]) ->
-	NewPL = set(PL,{Key,Val}),
-	set(NewPL,Rest).
+	[{Key,Val} | delete(Obj,Key)];
+set(Obj,[]) ->
+	Obj;
+set(Obj,[{Key,Val} | Rest]) ->
+	NewObj = set(Obj,{Key,Val}),
+	set(NewObj,Rest).
 
 % Will get a list of values in the order specified in the "Keys" argument
-get_list(PL,Keys,Default) when is_list(Keys) ->
-	[get(PL,Key,Default) || Key<-Keys].
+get_list(Obj,Keys,Default) when is_list(Keys) ->
+	[get(Obj,Key,Default) || Key<-Keys].
 
-get_list(PL,Keys) when is_list(Keys) ->
-	get_list(PL,Keys,"").
+get_list(Obj,Keys) when is_list(Keys) ->
+	get_list(Obj,Keys,"").
 
 % Get a single value using the key "Key" and if not found, return "Default"
-get(PL,Key,Default) ->
-	proplists:get_value(Key,PL,Default).
+get(Obj,Key,Default) ->
+	proplists:get_value(Key,Obj,Default).
 
-get(PL,Key) ->
-	get(PL,Key,"").
+get(Obj,Key) ->
+	get(Obj,Key,"").
 
-has_key(PL,Key) ->
-	lists:keymember(Key,1,PL).
+has_key(Obj,Key) ->
+	lists:keymember(Key,1,Obj).
 
-update(PL,[],_FormatFun) ->
-	PL;
-update(PL,[Key|RestKeys],FormatFun) ->
-	NewPL = update(PL,Key,FormatFun),
-	update(NewPL,RestKeys,FormatFun);
-update(PL,Key,FormatFun) ->
-	NewVal = FormatFun(get(PL,Key)),
-	set(PL,Key,NewVal).
+update(Obj,[],_FormatFun) ->
+	Obj;
+update(Obj,[Key|RestKeys],FormatFun) ->
+	NewObj = update(Obj,Key,FormatFun),
+	update(NewObj,RestKeys,FormatFun);
+update(Obj,Key,FormatFun) ->
+	NewVal = FormatFun(get(Obj,Key)),
+	set(Obj,Key,NewVal).
 
 
-boolize(PL,Keys) ->
-	update(PL,Keys,fun(V) ->
+boolize(Obj,Keys) ->
+	update(Obj,Keys,fun(V) ->
 		if
             V==false;
 			V==0;
@@ -83,17 +83,17 @@ boolize(PL,Keys) ->
 %% DateFormat can be date, unixtime, or a binary/string formatted for use with qdate, or any other term registered as a format with qdate
 %% Requires qdate installed.
 %% If DateFormat cannot be handled, will instead 
-format_date(PL, Keys, DateFormat) ->
+format_date(Obj, Keys, DateFormat) ->
 	UpdateFun = case DateFormat of
 		unixtime -> fun(D) -> try qdate:to_unixtime(D) catch _:_ -> 0 end end;
 		date -> fun(D) -> try qdate:to_date(D) catch _:_ -> {{1970,1,1},{0,0,0}} end end;
 		now -> fun(D) -> try qdate:to_now(D) catch _:_ -> {0,0,0} end end;
 		Format -> fun(D) -> try qdate:to_string(Format, D) catch _:_ -> "Invalid Format" end end
 	end,
-	update(PL, Keys, UpdateFun).
+	update(Obj, Keys, UpdateFun).
 
-atomize(PL,Keys) ->
-	update(PL,Keys,fun
+atomize(Obj,Keys) ->
+	update(Obj,Keys,fun
 		(V) when is_list(V) -> list_to_atom(V);
 		(V) when is_atom(V) -> V;
 		(V) when is_binary(V) -> list_to_atom(binary_to_list(V));
@@ -102,39 +102,39 @@ atomize(PL,Keys) ->
 	end).
 
 
-transform(PL,{date, Keys}) ->
-	format_date(PL, Keys, date);
-transform(PL,{unixtime, Keys}) ->
-	format_date(PL, Keys, unixtime);
-transform(PL,{now, Keys}) ->
-	format_date(PL, Keys, now);
-transform(PL,{{date,DateFormat}, Keys}) ->
-	format_date(PL, Keys, DateFormat);
+transform(Obj,{date, Keys}) ->
+	format_date(Obj, Keys, date);
+transform(Obj,{unixtime, Keys}) ->
+	format_date(Obj, Keys, unixtime);
+transform(Obj,{now, Keys}) ->
+	format_date(Obj, Keys, now);
+transform(Obj,{{date,DateFormat}, Keys}) ->
+	format_date(Obj, Keys, DateFormat);
 
-transform(PL,{boolize,Keys}) ->
-	boolize(PL,Keys);
-transform(PL,{atomize,Keys}) ->
-	atomize(PL,Keys);
-transform(PL,{Fun,Keys}) when is_function(Fun) ->
-	update(PL,Keys,Fun);
-transform(PL,{DateFormat, Keys}) ->
-	format_date(PL, Keys, DateFormat);
+transform(Obj,{boolize,Keys}) ->
+	boolize(Obj,Keys);
+transform(Obj,{atomize,Keys}) ->
+	atomize(Obj,Keys);
+transform(Obj,{Fun,Keys}) when is_function(Fun) ->
+	update(Obj,Keys,Fun);
+transform(Obj,{DateFormat, Keys}) ->
+	format_date(Obj, Keys, DateFormat);
 
-transform(PL,Map) when is_list(Map) ->
+transform(Obj,Map) when is_list(Map) ->
 	lists:foldl(fun(Action,Acc) ->
 		transform(Acc,Action)
-	end,PL,Map).
+	end,Obj,Map).
 
-map(PL,Fun) ->
-	[{Key,Fun(Val)} || {Key,Val} <- PL].	
+map(Obj,Fun) ->
+	[{Key,Fun(Val)} || {Key,Val} <- Obj].	
 
-rekey(PL,FromKey,ToKey) ->
-	rekey(PL,[{FromKey,ToKey}]).
+rekey(Obj,FromKey,ToKey) ->
+	rekey(Obj,[{FromKey,ToKey}]).
 
-rekey(PL,KeyMap) ->
+rekey(Obj,KeyMap) ->
 	lists:map(fun({K,V}) ->
 		{rekey_swapkey(K,KeyMap),V}
-	end,PL).
+	end,Obj).
 		
 
 rekey_swapkey(Current,KeyMap) ->
@@ -145,23 +145,23 @@ rekey_swapkey(Current,KeyMap) ->
 
 
 % TODO: improve performance by only traversing main list once. Fast enough for now
-delete_list(PL, []) ->
-	PL;
-delete_list(PL,[Key|RestKeys]) ->
-	NewPL = delete(PL,Key),
-	delete_list(NewPL,RestKeys).
+delete_list(Obj, []) ->
+	Obj;
+delete_list(Obj,[Key|RestKeys]) ->
+	NewObj = delete(Obj,Key),
+	delete_list(NewObj,RestKeys).
 
-delete(PL,Key) ->
-	lists:keydelete(Key, 1, PL).
+delete(Obj,Key) ->
+	lists:keydelete(Key, 1, Obj).
 
 
 % Opposite of delete(): keeps all listed keys and removes all others
-keep(PL,Keys) ->
+keep(Obj,Keys) ->
 	FilterFun = fun({Key,_Val}) ->
 		lists:member(Key,Keys)
 	end,
 	
-	lists:filter(FilterFun,PL).
+	lists:filter(FilterFun,Obj).
 
 merge_full(ExtendedProplist) ->
 	lists:foldl(fun
@@ -234,7 +234,7 @@ has_non_whitespace(_) ->
 % List of Proplists, returns the proplists that match the query values (specified as a tuple of {Key,Val} or a list of those tuples, in which case they must all match
 % no matches returns an empty list ( [] )
 %TODO: finish this
-%qry(PLL,{SearchKey,SearchVal}) ->
+%qry(ObjL,{SearchKey,SearchVal}) ->
 %	[].
 
 less_equal(A,B) ->
