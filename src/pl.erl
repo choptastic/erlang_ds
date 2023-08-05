@@ -1,4 +1,5 @@
-%% pl: Proplist Helper lib for 
+%% Copyright Jesse Gumm 2023
+%% MIT License
 -module(pl).
 
 -export([
@@ -10,6 +11,7 @@
 	delete_list/2,
 	update/3,
 	map/2,
+    filter/2,
 	rekey/2,
 	rekey/3,
 	keep/2,
@@ -21,20 +23,31 @@
 	merge/1,
 	merge/2,
 	guess_merge/1,
-	guess_merge/2
+	guess_merge/2,
+    type/1,
+    to_list/1,
+    to_dict/1,
+    to_map/1
 	]).
 
 % Can set with set(Proplist,Key,Val) or Set(PropList,{Key,Val}) or Set(Proplist,[{Key,Val},{Key,Val}])
 % retrieve values with get(Proplist,Key) or get(Proplist,Key,IfNotFound)
 % delete keys with delete(Proplist,Key)
 
+-define(IS_DICT(V), (is_tuple(V) andalso element(1, V)==dict)).
+-define(IS_BLANK(V), (V==undefined orelse V=="" orelse V==<<>>)).
+-define(IS_PROPLIST(V), (is_list(V) andalso is_tuple(hd(V)) andalso tuple_size(hd(V))==2)).
 
 set(Obj,Key,Val) ->
 	set(Obj,{Key,Val}).
 
-set(Obj,{Key,Val}) ->
+set(Obj,{Key,Val}) when is_list(Obj) ->
 	% delete a matching key if exists and prepend {K,V} to the list. No guarantee of proplist order
 	[{Key,Val} | delete(Obj,Key)];
+set(Obj,{Key,Val}) when is_map(Obj) ->
+    maps:set(Key, Val, Obj);
+set(Obj,{Key,Val}) when ?IS_DICT(Obj) ->
+    dict:store(Key, Val, Obj);
 set(Obj,[]) ->
 	Obj;
 set(Obj,[{Key,Val} | Rest]) ->
@@ -49,14 +62,25 @@ get_list(Obj,Keys) when is_list(Keys) ->
 	get_list(Obj,Keys,"").
 
 % Get a single value using the key "Key" and if not found, return "Default"
-get(Obj,Key,Default) ->
-	proplists:get_value(Key,Obj,Default).
+get(Obj,Key,Default) when is_list(Obj) ->
+	proplists:get_value(Key,Obj,Default);
+get(Obj,Key,Default) when is_map(Obj) ->
+    maps:get(Key,Obj,Default);
+get(Obj,Key,Default) when ?IS_DICT(Obj) ->
+    case dict:find(Key, Obj) of
+        {ok, Val} -> Val;
+        error -> Default
+    end.
 
 get(Obj,Key) ->
 	get(Obj,Key,"").
 
-has_key(Obj,Key) ->
-	lists:keymember(Key,1,Obj).
+has_key(Obj,Key) when is_list(Obj) ->
+	lists:keymember(Key,1,Obj);
+has_key(Obj,Key) when is_map(Obj) ->
+    maps:is_key(Key, Obj);
+has_key(Obj,Key) when ?IS_DICT(Obj) ->
+    dict:is_key(Key, Obj).
 
 update(Obj,[],_FormatFun) ->
 	Obj;
@@ -125,23 +149,26 @@ transform(Obj,Map) when is_list(Map) ->
 		transform(Acc,Action)
 	end,Obj,Map).
 
-map(Obj,Fun) ->
-	[{Key,Fun(Val)} || {Key,Val} <- Obj].	
+map(Obj,Fun) when is_list(Obj) ->
+	[{Key,Fun(Val)} || {Key,Val} <- Obj];
+map(Obj,Fun) when is_map(Obj); ?IS_DICT(Obj) ->
+    as_list(Obj, fun(List) -> map(List, Fun) end).
 
 rekey(Obj,FromKey,ToKey) ->
 	rekey(Obj,[{FromKey,ToKey}]).
 
-rekey(Obj,KeyMap) ->
+rekey(Obj,KeyMap) when is_list(Obj) ->
 	lists:map(fun({K,V}) ->
 		{rekey_swapkey(K,KeyMap),V}
-	end,Obj).
-		
+	end,Obj);
+rekey(Obj,KeyMap) when is_map(Obj); ?IS_DICT(Obj) ->
+    as_list(Obj, fun(List) -> rekey(List, KeyMap) end);
 
 rekey_swapkey(Current,KeyMap) ->
 	%% Since the KeyMap is itself a proplist of {oldkey,newkey},
 	%% let's find oldkey and return it's "value", and if it's not found, just
 	%% return itself
-	get(KeyMap,Current,Current).		
+	get(KeyMap,Current,Current).
 
 
 % TODO: improve performance by only traversing main list once. Fast enough for now
@@ -151,21 +178,32 @@ delete_list(Obj,[Key|RestKeys]) ->
 	NewObj = delete(Obj,Key),
 	delete_list(NewObj,RestKeys).
 
-delete(Obj,Key) ->
-	lists:keydelete(Key, 1, Obj).
+delete(Obj,Key) when is_list(Obj) ->
+	lists:keydelete(Key, 1, Obj);
+delete(Obj,Key) when is_map(Obj) ->
+    maps:remove(Key, Obj);
+delete(Obj,Key) when ?IS_DICT(Obj) ->
+    dict:erase(Key, Obj).
 
 
-% Opposite of delete(): keeps all listed keys and removes all others
+% Opposite of delete_list(): keeps all listed keys and removes all others
 keep(Obj,Keys) ->
 	FilterFun = fun({Key,_Val}) ->
 		lists:member(Key,Keys)
 	end,
-	
-	lists:filter(FilterFun,Obj).
+    Filter(Obj, FilterFun).
 
-merge_full(ExtendedProplist) ->
+filter(Obj, Fun) when is_list(Obj) ->
+    lists:filter(FilterFun,Obj);
+filter(Obj, Fun) when is_map(Obj) ->
+    maps:filter(FilterFun,Obj);
+filter(Obj, Fun) when ?IS_DICT(Obj) ->
+    dict:filter(FilterFun, Obj).
+    
+
+merge_full(ExtendedProplist) when ?IS_PROPLIST(ExtendedProplist) ->
 	lists:foldl(fun
-		({_,Ignore},Acc) when Ignore=="" orelse Ignore==undefined ->
+		({_,Val},Acc) when ?IS_BLANK(Val) ->
 				%% Ignore all values of ""
 				Acc;
 		({Key,Val},{Merged,Unmerged}) ->
@@ -173,7 +211,7 @@ merge_full(ExtendedProplist) ->
 				undefined ->
 					%% This key is not flagged as an unmergable one, so we try it out
 					case get(Merged,Key) of
-						NewV when NewV=="" orelse NewV==undefined -> 
+						NewV when ?IS_BLANK(NewV) -> 
 							NewMerged = set(Merged,Key,Val),
 							{NewMerged,Unmerged};
 						Val -> 	
@@ -198,11 +236,16 @@ merge(A,B) ->
 %% Returns a two_tuple: {Merged, Unmerged}
 %% Merged is the new merged result
 merge(List) ->
-	merge_full(lists:flatten(List)).
+    Type = type(hd(List))
+    List2 = lists:flatten([to_list(X) || X <- List]),
+    {Merged, Unmerged} = merge_full(lists:flatten(List)),
+    {to_type(Type, Merged), to_type(Type, Unmerged)}.
 
 %% Returns a single proplist with a guess of the final proplist.
 %% For each field, just returns the first value it encounters, even if it's not the same
-guess_merge(List) ->
+guess_merge([]) ->
+    [];
+guess_merge(List) when ?IS_PROPLIST(List)
 	FinalDict = lists:foldl(fun({K,V},Dict) ->
 		case not(dict:is_key(K,Dict)) 
 					andalso V=/=undefined 
@@ -210,8 +253,13 @@ guess_merge(List) ->
 			true -> dict:store(K,V,Dict);
 			false -> Dict
 		end
-	end,dict:new(),lists:flatten(List)),
-	dict:to_list(FinalDict).
+	end,dict:new(),List),
+	dict:to_list(FinalDict);
+guess_merge(Objs) ->
+    ToType = type(hd(Objs)),
+    FlatProplist = lists:flatten([to_list(Obj) || Obj <- Objs]),
+    Merged = guess_merge(FlatProplist),
+    to_type(ToType, Merged).
 
 guess_merge(A,B) ->
 	guess_merge([A,B]).
@@ -276,5 +324,75 @@ compare(A,B,[SortField|RestSorts]) ->
 		greater -> false;
 		false -> false
 	end.
+
+% this converts Obj to a proplist, runs the script as the proplist, and returns
+% it back to it's original type
+as_list(Fun, Obj) when is_list(Obj) ->
+    Fun(Obj);
+as_list(Fun, Obj) when is_map(Fun) ->
+    from_and_to_map(Fun, Obj);
+as_list(Fun, Obj) when ?IS_DICT(Fun) ->
+    from_and_to_dict(Fun, Obj).
+
+to_list(Obj) when is_list(Obj) ->
+    Obj;
+to_list(Obj) when is_map(Obj) ->
+    maps:to_list(Obj);
+to_list(Obj) when ?IS_DICT(Obj) ->
+    dict:to_list(Obj).
+
+to_dict(Obj) when ?IS_DICT(Obj) ->
+    Obj;
+to_dict(Obj) when is_list(Obj) ->
+    dict:from_list(Obj);
+to_dict(Obj) when is_map(Obj) ->
+    List = maps:to_list(List),
+    dict:from_list(Obj).
+
+to_map(Obj) when is_list(Obj) ->
+    maps:from_list(Obj);
+to_map(Obj) when is_map(Obj) ->
+    Obj;
+to_map(Obj) when ?IS_DICT(Obj) ->
+    List = to_list(Obj),
+    maps:from_list(List).
+
+
+to_type(list, Obj) ->
+    to_list(Obj);
+to_type(map, Obj) ->
+    to_map(Obj);
+to_type(dict, Obj) ->
+    to_dict(Obj).
+
+from_and_to_type(Fun, Obj) ->
+    Type = type(Obj),
+    from_and_to_type(Type, Fun, Obj).
+
+
+from_and_to_type(list, Fun, Obj) ->
+    Fun(Obj);
+from_and_to_type(map, Fun, Obj) ->
+    from_and_to_map(Fun, Obj);
+from_and_to_type(dict, Fun, Obj) ->
+    from_and_to_dict(Fun, Obj).
+
+from_and_to_dict(Fun, Obj) ->
+    List = dict:to_list(Obj),
+    List2 = Fun(List),
+    dict:from_list(Obj).
+
+from_and_to_map(Fun, Obj) ->
+    List = maps:to_list(Obj),
+    List2 = Fun(List),
+    maps:from_list(Obj).
+
+type(Obj) when is_list(Obj) ->
+    list;
+type(Obj) when is_map(Obj) ->
+    map;
+type(Obj) when ?IS_DICT(Obj) ->
+    dict.
+
 
 
