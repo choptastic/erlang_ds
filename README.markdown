@@ -9,6 +9,7 @@ A simple library for doing common things with common Erlang data structures (pro
   * Filtering Keys (`ds:keep(Obj, [good_key, other_good_key])` removes all keys from the Object that aren't missing. The reverse of this is `ds:delete_list(Obj, [bad_key, other_bad_key])`
   * Merging objects
   * Provides a helper for sorting lists of objects
+  * All functions will return the same object type as was passed in. So if `Obj` is a proplist, it will return a proplist. If `Obj` is a map, it will return a map, etc.
 
 More documentation to come
 
