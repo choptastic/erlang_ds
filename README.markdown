@@ -1,27 +1,27 @@
-# Sigma Proplist
+# Erlang Generized Data Structure Library
 
 *Everyone has to reinvent this wheel, here's my version*
 
-A simple library for doing common things with Erlang proplists following certain conventions:
+A simple library for doing common things with common Erlang data structures (proplists, dicts, and maps for now). all with the same function calls. These all follow certain conventions:
 
-  * Calls are short (`pl:get` instead of `proplists:get_value` or `lists:keyfind`).
-  * Perform inline actions with some standardized procedures for common things (e.g. `pl:atomize(PL, [key1, key2])` converts the values of the associated keys `key1` and `key2` into atoms and returns the new Proplist.
-  * Filtering Keys (`pl:keep(PL, [good_key, other_good_key])` removes all keys from the proplist that aren't missing. The reverse of this is `pl:delete_list(PL, [bad_key, other_bad_key])`
-  * Merging Proplists
-  * Provides a helper for sorting lists of proplists
+  * Calls are short (`ds:get` instead of `proplists:get_value` or `lists:keyfind`).
+  * Perform inline actions with some standardized procedures for common things (e.g. `ds:atomize(Obj, [key1, key2])` converts the values of the associated keys `key1` and `key2` into atoms and returns the new Object
+  * Filtering Keys (`ds:keep(Obj, [good_key, other_good_key])` removes all keys from the Object that aren't missing. The reverse of this is `ds:delete_list(Obj, [bad_key, other_bad_key])`
+  * Merging objects
+  * Provides a helper for sorting lists of objects
 
 More documentation to come
 
-## Add to your app with rebar
+## Add to your rebar.config's deps section
 
 ```erlang
 {deps, [
-	{sigma_proplist, ".*", {git, "git://github.com/choptastic/sigma_proplist.git", {branch, master}}}
+	erlang_ds
 ]}.
 ```
 
 ## About
 
-Author: [Jesse Gumm](http://github.com/choptastic) ([@jessegumm](http://twitter.com/jessegumm))
+Author: [Jesse Gumm](http://github.com/choptastic)
 
 MIT License

@@ -1,6 +1,6 @@
 %% Copyright Jesse Gumm 2023
 %% MIT License
--module(pl).
+-module(ds).
 
 -export([
     set/2,set/3,
