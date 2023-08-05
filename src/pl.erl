@@ -45,7 +45,7 @@ set(Obj,{Key,Val}) when is_list(Obj) ->
     % delete a matching key if exists and prepend {K,V} to the list. No guarantee of proplist order
     [{Key,Val} | delete(Obj,Key)];
 set(Obj,{Key,Val}) when is_map(Obj) ->
-    maps:set(Key, Val, Obj);
+    maps:put(Key, Val, Obj);
 set(Obj,{Key,Val}) when ?IS_DICT(Obj) ->
     dict:store(Key, Val, Obj);
 set(Obj,[]) ->
@@ -162,7 +162,7 @@ rekey(Obj,KeyMap) when is_list(Obj) ->
         {rekey_swapkey(K,KeyMap),V}
     end,Obj);
 rekey(Obj,KeyMap) when is_map(Obj); ?IS_DICT(Obj) ->
-    as_list(Obj, fun(List) -> rekey(List, KeyMap) end);
+    as_list(Obj, fun(List) -> rekey(List, KeyMap) end).
 
 rekey_swapkey(Current,KeyMap) ->
     %% Since the KeyMap is itself a proplist of {oldkey,newkey},
@@ -172,6 +172,7 @@ rekey_swapkey(Current,KeyMap) ->
 
 
 % TODO: improve performance by only traversing main list once. Fast enough for now
+% Maybe just use filter/2.
 delete_list(Obj, []) ->
     Obj;
 delete_list(Obj,[Key|RestKeys]) ->
@@ -188,17 +189,20 @@ delete(Obj,Key) when ?IS_DICT(Obj) ->
 
 % Opposite of delete_list(): keeps all listed keys and removes all others
 keep(Obj,Keys) ->
-    FilterFun = fun({Key,_Val}) ->
+    FilterFun = fun(Key,_Val) ->
         lists:member(Key,Keys)
     end,
-    Filter(Obj, FilterFun).
+    filter(Obj, FilterFun).
 
 filter(Obj, Fun) when is_list(Obj) ->
-    lists:filter(FilterFun,Obj);
+    %% maps and dict filters use fun(K,V), while lists:filter would use
+    %% fun({K,V}), so we need a translation
+    ListFun = fun({K,V}) -> Fun(K,V) end,
+    lists:filter(ListFun, Obj);
 filter(Obj, Fun) when is_map(Obj) ->
-    maps:filter(FilterFun,Obj);
+    maps:filter(Fun, Obj);
 filter(Obj, Fun) when ?IS_DICT(Obj) ->
-    dict:filter(FilterFun, Obj).
+    dict:filter(Fun, Obj).
     
 
 merge_full(ExtendedProplist) when ?IS_PROPLIST(ExtendedProplist) ->
@@ -236,16 +240,16 @@ merge(A,B) ->
 %% Returns a two_tuple: {Merged, Unmerged}
 %% Merged is the new merged result
 merge(List) ->
-    Type = type(hd(List))
+    Type = type(hd(List)),
     List2 = lists:flatten([to_list(X) || X <- List]),
-    {Merged, Unmerged} = merge_full(lists:flatten(List)),
+    {Merged, Unmerged} = merge_full(List2),
     {to_type(Type, Merged), to_type(Type, Unmerged)}.
 
 %% Returns a single proplist with a guess of the final proplist.
 %% For each field, just returns the first value it encounters, even if it's not the same
 guess_merge([]) ->
     [];
-guess_merge(List) when ?IS_PROPLIST(List)
+guess_merge(List) when ?IS_PROPLIST(List) ->
     FinalDict = lists:foldl(fun({K,V},Dict) ->
         case not(dict:is_key(K,Dict)) 
                     andalso V=/=undefined 
@@ -327,12 +331,12 @@ compare(A,B,[SortField|RestSorts]) ->
 
 % this converts Obj to a proplist, runs the script as the proplist, and returns
 % it back to it's original type
-as_list(Fun, Obj) when is_list(Obj) ->
+as_list(Obj, Fun) when is_list(Obj) ->
     Fun(Obj);
-as_list(Fun, Obj) when is_map(Fun) ->
-    from_and_to_map(Fun, Obj);
-as_list(Fun, Obj) when ?IS_DICT(Fun) ->
-    from_and_to_dict(Fun, Obj).
+as_list(Obj, Fun) when is_map(Obj) ->
+    from_and_to_map(Obj, Fun);
+as_list(Obj, Fun) when ?IS_DICT(Obj) ->
+    from_and_to_dict(Obj, Fun).
 
 to_list(Obj) when is_list(Obj) ->
     Obj;
@@ -346,8 +350,8 @@ to_dict(Obj) when ?IS_DICT(Obj) ->
 to_dict(Obj) when is_list(Obj) ->
     dict:from_list(Obj);
 to_dict(Obj) when is_map(Obj) ->
-    List = maps:to_list(List),
-    dict:from_list(Obj).
+    List = maps:to_list(Obj),
+    dict:from_list(List).
 
 to_map(Obj) when is_list(Obj) ->
     maps:from_list(Obj);
@@ -365,27 +369,27 @@ to_type(map, Obj) ->
 to_type(dict, Obj) ->
     to_dict(Obj).
 
-from_and_to_type(Fun, Obj) ->
-    Type = type(Obj),
-    from_and_to_type(Type, Fun, Obj).
+%from_and_to_type(Fun, Obj) ->
+%    Type = type(Obj),
+%    from_and_to_type(Type, Fun, Obj).
+%
+%
+%from_and_to_type(list, Fun, Obj) ->
+%    Fun(Obj);
+%from_and_to_type(map, Fun, Obj) ->
+%    from_and_to_map(Fun, Obj);
+%from_and_to_type(dict, Fun, Obj) ->
+%    from_and_to_dict(Fun, Obj).
 
-
-from_and_to_type(list, Fun, Obj) ->
-    Fun(Obj);
-from_and_to_type(map, Fun, Obj) ->
-    from_and_to_map(Fun, Obj);
-from_and_to_type(dict, Fun, Obj) ->
-    from_and_to_dict(Fun, Obj).
-
-from_and_to_dict(Fun, Obj) ->
+from_and_to_dict(Obj, Fun) ->
     List = dict:to_list(Obj),
     List2 = Fun(List),
-    dict:from_list(Obj).
+    dict:from_list(List2).
 
-from_and_to_map(Fun, Obj) ->
+from_and_to_map(Obj, Fun) ->
     List = maps:to_list(Obj),
     List2 = Fun(List),
-    maps:from_list(Obj).
+    maps:from_list(List2).
 
 type(Obj) when is_list(Obj) ->
     list;
@@ -395,4 +399,51 @@ type(Obj) when ?IS_DICT(Obj) ->
     dict.
 
 
+-include_lib("eunit/include/eunit.hrl").
 
+base_pl() ->
+    [{a,1},{b,2},{c,3}].
+
+base_map() ->
+    maps:from_list(base_pl()).
+
+base_dict() ->
+    dict:from_list(base_pl()).
+
+pl_test_() ->
+    Obj = base_pl(),
+    obj_test_core(Obj).
+
+map_test_() ->
+    Obj = base_map(),
+    obj_test_core(Obj).
+
+dict_test_() ->
+    Obj = base_dict(),
+    obj_test_core(Obj).
+
+obj_test_core(Obj) ->
+    [   
+        ?_assert(has_key(Obj, b)),
+        ?_assertNot(has_key(Obj, x)),
+        ?_assertEqual(1, get(Obj, a)),
+        ?_assertEqual(2, get(Obj, b)),
+        ?_assertEqual(3, get(Obj, c)),
+        ?_assertEqual(4, get(set(Obj, b, 4), b)),
+        ?_assertEqual([3,1,2], get_list(Obj, [c,a,b])),
+        ?_assertEqual("", get(Obj, x)),
+        ?_assertEqual(4, get(set(Obj, d, 4), d)),
+        ?_assertEqual(123, get(Obj, x, 123)),
+        ?_assertEqual("", get(delete(Obj, a), a)),
+        ?_assertEqual(["", "", 3], get_list(delete_list(Obj, [a,b]), [a,b,c])),
+        ?_assertEqual([1, "", 3], get_list(keep(Obj, [a,c]), [a,b,c])),
+        ?_assertEqual("", get(delete(Obj, x), x)), %% just showing it doesn't crash
+        ?_assertEqual([1,2,3,10,11], get_list(set(Obj, [{j,10},{k,11}]), [a,b,c,j,k])),
+        ?_assertEqual(["","","",1,2,3], get_list(rekey(Obj, [{a, x}, {b, y}, {c, z}]), [a,b,c,x,y,z])),
+        ?_assertEqual(4, get(update(Obj, b, fun(X) -> X*X end), b)), %% 2*2 = 4, duh,
+        %% multiplifing the default values by themslves
+        ?_assertEqual([1,4,9], get_list(transform(Obj, [{fun(X) -> X*X end, [a,b,c]}]), [a,b,c])),
+        ?_assertEqual(list, type(to_list(Obj))),
+        ?_assertEqual(map, type(to_map(Obj))),
+        ?_assertEqual(dict, type(to_dict(Obj)))
+    ].
