@@ -9,5 +9,7 @@
                  ]},
   {env, []},
   {licenses, ["MIT"]},
+  {maintainers, ["Jesse Gumm"]},
+  {modules, [erlang_ds]},
   {links, [{"Github", "http://github.com/choptastic/erlang_ds"}]}
  ]}.
