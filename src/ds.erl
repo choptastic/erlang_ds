@@ -28,7 +28,7 @@
     to_list/1,
     to_dict/1,
     to_map/1
-    ]).
+]).
 
 % Can set with set(Proplist,Key,Val) or Set(PropList,{Key,Val}) or Set(Proplist,[{Key,Val},{Key,Val}])
 % retrieve values with get(Proplist,Key) or get(Proplist,Key,IfNotFound)
@@ -149,9 +149,13 @@ transform(Obj,Map) when is_list(Map) ->
         transform(Acc,Action)
     end,Obj,Map).
 
-map(Obj,Fun) when is_list(Obj) ->
+map(Obj,Fun) when is_list(Obj) andalso is_function(Fun, 1) ->
     [{Key,Fun(Val)} || {Key,Val} <- Obj];
-map(Obj,Fun) when is_map(Obj); ?IS_DICT(Obj) ->
+map(Obj,Fun) when is_list(Obj) andalso is_function(Fun, 2) ->
+    [{Key,Fun(Key, Val)} || {Key,Val} <- Obj];
+map(Obj,Fun) when is_map(Obj); ?IS_DICT(Obj)
+                  andalso (is_function(Fun, 1)
+                           orelse is_function(Fun, 2)) ->
     as_list(Obj, fun(List) -> map(List, Fun) end).
 
 rekey(Obj,FromKey,ToKey) ->
