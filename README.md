@@ -188,13 +188,27 @@ by one module is insufficient for my needs. For example:
   does it which way.  `get` and `set`, for example, which are the most common
   operations in any of my codebases (and I suspect the most common in yours as
   well) are implemented in `maps` as `get` and `put`, in `dict` as `find` and
-  `store`, and in `proplists` as `get_value` and *not implemented* (basically,
-  just delete the old value and prepend the new `{Key,Value}` tuple).
+  `store`, in `proplists` as `get_value` and *not implemented* (basically,
+  just delete the old value and prepend the new `{Key,Value}` tuple), or with
+  the `lists` module as `keyfind` and `keystore`.
 
 None of this is to criticize the Erlang team - they do incredible work, and
-they can't do everything for everyone.  Perhaps my use cases are not useful to
-the community at large, but I suspect there are others out there like me who
-need or want this kind of utility.
+they can't do everything for everyone, nor should every API for every data
+structure be exactly the same. Indeed, the `lists:key*` functions are
+individually more flexible for lists of tuples of all sizes (not just the
+`{Key, Value}` tuples. But for someone using mostly `{Key, Value}` tuples,
+`lists:key:*` are overkill (but are very handy to use under the hood for the
+functions in Erlang DS).
+
+Perhaps my use cases are not useful to the community at
+large, but I suspect there are others out there like me who need
+or want this kind of utility.
+
+Further, I acknowledge that there likely some inefficiencies here, or methods
+where I might be using a less-than ideal implementation, and for that, I'm open
+to comments and pull requests to improve the software.
+
+## Final Comment
 
 Erlang DS was originally called `sigma_proplist` using a module called just
 `pl`.  "Sigma" is just a reference to the author's software business, [Sigma
