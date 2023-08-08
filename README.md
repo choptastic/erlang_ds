@@ -1,68 +1,67 @@
 # Data Structure Agnostic Library for Erlang
 
-A simple library for doing common things with common Erlang data structures
-(proplists, dicts, and maps for now). This will convert from one structure to
-another, and can allow you to "just do the damn thing" without worrying about
-the form of the underlying data structure.
+Introducing a simple library tailored for Erlang's common data structures
+(currently supporting proplists, dicts, and maps). With a universal interface,
+seamlessly convert between structures and harness additional functionalities
+not natively found in some, or even any, of these data types. Just "do the damn
+thing" without sweating about the underlying structure.
 
-This is also designed to help the user incrementally convert an application
-from one data structure to another. For example, if you have a legacy
-application that uses proplists as a primary data structure, and you want to
-upgrade to using maps instead, this is a handy tool for making that conversion,
-since the calls to `ds` don't have to change.
+Contemplating an upgrade for a legacy app from proplists to maps? This tool's
+got your back. With `ds`, maintain consistent calls for a smooth, hassle-free
+transition.
 
 
-## A few things worth noting:
+## Key Points to Remember:
 
-* The primary module here is `ds`.  For example: `ds:get` is a function call to
-  get values.
-* Calls are intended to be short (less typing).  So `ds:get` instead of
-  `proplist:get_value`.
-* Currently supported data structures are: maps, dicts, and lists of
-  `{Key,Value}` tuples (generally referred to as proplists here, but these
-  are not *exactly* proplists [0]).
-* Calls work regardless of the supported data structure.
-* If the return value is intended to be a modified version of the provided
-  data structure (e.g. `ds:set(Obj, Key, Value)`), then the return value will
-  be of the same type.  So from that example, if `Obj` is a map, the return
-  value is a map.  If `Obj` is a dict, then the return value is a dict.
-* In *most* circumstances, the `Obj` argument (the Data Structure) is the
-  first argument in a function, rather than the norm in Erlang where it is
-  typically the last argument. For example: `proplists:get_value(Key, Obj)`
-  vs `ds:get(Obj, Key)`.
-* Also, in *most* circumstances, if there is a `Default` value (to return if
-  a key isn't found) that `Default` argument will be the last argument of the
-  function. For example: `ds:get(Obj, Key, DefaultValue)`.
-* **Controversial Item**: The standard return value if something isn't found
-  is an empty string/empty list (`""` or `[]`).  If this is a major sticking
-  point for users, this can be changed to a config setting.
+* The central module is `ds`. For instance, to fetch values, use `ds:get`.
+* Calls are designed for brevity. Hence, `ds:get` is favored over
+  `proplist:get_value`. The choice of using `ds` with the `D` and `S` keys
+  adjacent to eachother is fully intentional for typing speed.
+* The supported structures are
+  [maps](https://www.erlang.org/doc/man/maps.html),
+  [dicts](https://www.erlang.org/doc/man/dict.html), and `{Key,Value}` tuple
+  lists, the latter generally referred in this document as
+  [proplists](https://www.erlang.org/doc/man/proplists.html), although
+  `{Key,Value}` tuple lists are technically only a subset of proplists.
+* Calls are structure-agnostic with the supported types - meaning the calls
+  will work regardless of the data structure type (as long as the type is
+  supported).
+* Functions that return a modified version of the provided data, such as
+  `ds:set(Obj, Key, Value)`, ensure the returned structure matches the input.
+  For example, if `Obj` is a map, the output is also a map.
+* Typically, `Obj` (the data structure we're working with) is the
+  firstargument, contrasting the common Erlang practice of making it the last
+  argument.
+* In most cases, when a `Default` value exists, it's positioned as the
+  function's last argument. E.g., `ds:get(Obj, Key, DefaultValue)`.
+* **Discussion Point**: The default return for missing values is either an
+  empty string (`""`) or an empty list (`[]`). If this isn't favorable, we're
+  open to making it configurable.
 
 ## Function Reference
 
-**`Obj` and the term "object" will be used to represent the provided data
-structure, even though I'm well aware none of these are true `Objects` in the
-Object-oriented sense.**
+**Reference Preface 1:** When we mention "object" or `Obj`, we're referring to
+the provided data structure, even if it doesn't align with the traditional OO
+paradigm.
 
-**Optional Arguments are presented in `[Brackets]`**
+**Reference Preface 2:** Optional Arguments are denoted by `[Brackets]`
 
 ### Getting, Setting, and Deleting (one value)
 
-* `ds:get(Obj, Key, [Default])`: Get the value associated with `Key` from
-  `Obj`. Return the found value, or return `Default` if no value is found,
-  and if `Default` is not provided, return `""`
-* `ds:set(Obj, Key, Value)`: In `Obj` set the value associated with `Key` to
-  `Value`, and return the modified object.
+* `ds:get(Obj, Key, [Default])`: Retrieve the value associated with `Key` in
+  `Obj`.  If missing, `Default` is returned. Without `Default`, it returns
+  `""`.
+* `ds:set(Obj, Key, Value)`: Sets `Key` in `Obj` to `Value` and returns the
+  updated object.
 
 ### Getting and Setting (multiple values)
 
-* `ds:get_list(Obj, ListOfKeys, [Default])`: For each item in `ListOfKeys`
-  return a the associated value (or if not found, return `Default` for that
-  item, or if `Default` is not provided, return `""` for that key). Example:
-  `[A,B] = ds:get_list(Obj, [a,b])`
-* `ds:set(Obj, ListOfKeyValues)`: `ListOfKeyValues` is a list of
-  `{Key,Value}` tuples, and perform a mass-update by setting each value
-  associated with `Key` to `Value` in the provided `Obj` and return the
-  modified object.
+* `ds:get_list(Obj, ListOfKeys, [Default])`: Fetches values associated with
+  each key in `ListOfKeys`. If a value is missing, it returns either the
+  `Default` or `""` for that value. Returns a list of values in the same order
+  as the keys in `ListOfKeys`.  Example: `[A,B] = ds:get_list(Obj, [a,b])`
+* `ds:set(Obj, ListOfKeyValues)`: Here, `ListOfKeyValues` is a set of
+  `{Key,Value}` tuples. This function updates `Obj` in bulk with these values.
 
 ### Deleting and Filtering Values
 
@@ -165,58 +164,46 @@ Object-oriented sense.**
 ]}.
 ```
 
-## History and Philosophy
+## Origins & Philosophy
 
-This library came out of a desire to have a single module with short function
-calls to work with proplists (bear in mind, this was made before Erlang had a
-native `map` data structure).  In most circumstances these days, maps are the
-superior data structure.  But there is legacy code using proplists or dicts for
-things, or a mix of all three.
+Erlang DS emerged from the need for a unified module with concise function
+calls tailored for proplists, especially before Erlang's introduction of the
+map structure. Although maps have become a preferred choice, legacy code still
+utilizes proplists or dicts, or even a mix of the trio.
 
-On top of that, there are a lot of situations where the functionality provided
-by one module is insufficient for my needs. For example:
+For a few examples of the motivation to create this:
 
 * While `maps` and `dict` both support merging, `proplists` does not.
 * While `ds:transform` and `ds:rekey` can both be implemented with
   `Module:map`, `map` is clunky for both.
 * While `map` supports getting multiple things per line with pattern matching
   (`#{key:=Value, key2:=Value2} = Map`), this is not supported by proplists or
-  dicts. Also, the `map` syntax above will crash if one of the values isn't
-  present, necessitating the `maps:get/3` function anyway.
-* The inconsistencies of the modules makes me constantly forget which module
-  does it which way.  `get` and `set`, for example, which are the most common
-  operations in any of my codebases (and I suspect the most common in yours as
-  well) are implemented in `maps` as `get` and `put`, in `dict` as `find` and
-  `store`, in `proplists` as `get_value` and *not implemented* (basically,
-  just delete the old value and prepend the new `{Key,Value}` tuple), or with
-  the `lists` module as `keyfind` and `keystore`.
+  dicts. Also, the map matching syntax above will crash if one of the values
+  isn't present, necessitating the `maps:get/3` function anyway.
+* The inconsistencies of between the data structure modules makes me constantly
+  forget which module does it which way.  `get` and `set`, for example, which
+  are the most common operations in any of my codebases (and I suspect the most
+  common in yours as well) are implemented in `maps` as `get` and `put`, in
+  `dict` as `find` and `store`, in `proplists` as `get_value` and *not
+  implemented* (basically, just delete the old value and prepend the new
+  `{Key,Value}` tuple), or with the `lists` module as `keyfind` and `keystore`.
 
-None of this is to criticize the Erlang team - they do incredible work, and
-they can't do everything for everyone, nor should every API for every data
-structure be exactly the same. Indeed, the `lists:key*` functions are
-individually more flexible for lists of tuples of all sizes (not just the
-`{Key, Value}` tuples. But for someone using mostly `{Key, Value}` tuples,
-`lists:key:*` are overkill (but are very handy to use under the hood for the
-functions in Erlang DS).
+None of these comments is to criticize the Erlang team - they are incredible,
+and what they've built is incredibly powerful. But no one can be everything to
+everyone, and tailor their development to every one of their users'
+requirements or idiocyncracies. Hence, this library was born to bridge such
+gaps and offer utility.
 
-Perhaps my use cases are not useful to the community at
-large, but I suspect there are others out there like me who need
-or want this kind of utility.
+Constructive feedback and pull requests are heartily welcomed.
 
-Further, I acknowledge that there likely some inefficiencies here, or methods
-where I might be using a less-than ideal implementation, and for that, I'm open
-to comments and pull requests to improve the software.
+**PULL REQUESTS ARE WELCOMED**
 
-**PULL REQUESTS ARE WELCOME**
+## Additional Notes
 
-## Final Comment
-
-Erlang DS was originally called `sigma_proplist` using a module called just
-`pl`.  "Sigma" is just a reference to the author's software business, [Sigma
-Star Systems](https://sigma-star.com).  The project was renamed to "Erlang DS"
-when it added support for other data structures. The original `sigma_proplists`
-has been running in production for almost 10 years before converting it to
-`Erlang DS`.
+Formerly known as `sigma_proplist`, Erlang DS originated from [Sigma Star
+Systems](https://sigma-star.com). After nearly a decade in production, it was
+refashioned to support more data structures, resulting in the Erlang DS we have
+today.
 
 ## About
 
