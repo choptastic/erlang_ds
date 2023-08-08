@@ -14,8 +14,8 @@ since the calls to `ds` don't have to change.
 
 ## A few things worth noting:
 
-* The primary module here is `ds`.  So `ds:get` is a function call to get
-  values.  
+* The primary module here is `ds`.  For example: `ds:get` is a function call to
+  get values.
 * Calls are intended to be short (less typing).  So `ds:get` instead of
   `proplist:get_value`.
 * Currently supported data structures are: maps, dicts, and lists of
@@ -139,7 +139,7 @@ Object-oriented sense.**
   arguments will be the values associated with `Key` of from `ObjA` and
   `ObjB`. If no `Operation` is provided (that is, if an item in
   `SortCriteria` is not a 2-tuple, it's treated as a `Key` and `asc` is used
-  (sort in ascending order)`
+  (sort in ascending order).
 
 ### Merging Objects
 
