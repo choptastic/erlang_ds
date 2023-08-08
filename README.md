@@ -169,9 +169,9 @@ Object-oriented sense.**
 
 This library came out of a desire to have a single module with short function
 calls to work with proplists (bear in mind, this was made before Erlang had a
-native `map` data structure).  In most circumstances, these days, maps are the
-superior data structure these days.  But there is legacy code using proplists
-or dicts for things, or a mix of all three.
+native `map` data structure).  In most circumstances these days, maps are the
+superior data structure.  But there is legacy code using proplists or dicts for
+things, or a mix of all three.
 
 On top of that, there are a lot of situations where the functionality provided
 by one module is insufficient for my needs. For example:
@@ -206,6 +206,8 @@ or want this kind of utility.
 Further, I acknowledge that there likely some inefficiencies here, or methods
 where I might be using a less-than ideal implementation, and for that, I'm open
 to comments and pull requests to improve the software.
+
+**PULL REQUESTS ARE WELCOME**
 
 ## Final Comment
 
