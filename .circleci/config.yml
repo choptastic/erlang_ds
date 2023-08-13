@@ -10,7 +10,7 @@ jobs:
     # See: https://circleci.com/docs/configuration-reference/#docker-machine-macos-windows-executor
     docker:
       # specify the version here
-      - image: _/erlang:26.0.2.0
+      - image: erlang:26.0.2.0
 
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
