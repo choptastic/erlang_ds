@@ -1,9 +1,9 @@
 # Data Structure Agnostic Library for Erlang
 
 Introducing a simple library tailored for Erlang's common key-value data
-structures.  Currently it ships supporting proplists and maps, with dict
-support provided with a built-in handler, and the handler system extends the
-supported types.  With a universal interface, seamlessly convert between
+structures.  Currently it ships supporting proplists, maps, and dicts (with a
+built-in handler). It can be further expanded to support new types with the
+handler system.  With a universal interface, seamlessly convert between
 structures and harness additional functionalities not natively found in some,
 or even any, of these data types. Just "do the damn thing" without sweating
 about the underlying structure.
