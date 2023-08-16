@@ -1,5 +1,10 @@
 -module(erlang_ds_register).
 
+-dialyzer([
+    {nowarn_function, bench/0},
+    {nowarn_function, get_type_handlers_appvar/0}
+]).
+
 -export([
     get_type_handlers/0,
     %bench/0,

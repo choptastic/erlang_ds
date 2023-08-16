@@ -4,7 +4,7 @@
 -export([
     type/0,
     is_type/1,
-    set/2,
+    set/3,
     get/3,
     has_key/2,
     delete/2,
@@ -23,7 +23,7 @@ is_type(Obj) ->
         false
     end.
 
-set(Obj, {Key, Val}) ->
+set(Obj, Key, Val) ->
     dict:store(Key, Val, Obj).
 
 get(Obj, Key, Default) ->

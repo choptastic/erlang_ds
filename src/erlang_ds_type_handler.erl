@@ -1,11 +1,11 @@
--module(erlang_ds_handler).
+-module(erlang_ds_type_handler).
 
 
 -callback type() -> ds:obj_type().
 
 -callback is_type(ds:object()) -> boolean().
 
--callback set(ds:object(), ds:key_value_tuple()) -> ds:object().
+-callback set(ds:object(), ds:key(), ds:value()) -> ds:object().
 
 -callback get(ds:object(), ds:key(), ds:default_value()) -> ds:value().
 

@@ -2,14 +2,14 @@
 %% MIT License
 -module(ds).
 
-%% We're loosening up dialyzer a bit here because it doesn't like that we have
-%% to pick apart dict as a tuple, and dialyzer really doesn't like that, since
-%% dict:dict is an opaque type.
--dialyzer([
-    no_opaque,
-    no_underspecs,
-    no_return
-]).
+%%% We're loosening up dialyzer a bit here because it doesn't like that we have
+%%% to pick apart dict as a tuple, and dialyzer really doesn't like that, since
+%%% dict:dict is an opaque type.
+%-dialyzer([
+%    no_opaque,
+%    no_underspecs,
+%    no_return
+%]).
 
 %% create custom type handlers that aren't `list` or `map`
 -export([
@@ -47,12 +47,11 @@
     guess_merge/2,
     type/1,
     to_list/1,
-    to_dict/1,
     to_map/1,
     to_type/2
 ]).
 
--define(IS_DICT(V), (is_tuple(V) andalso element(1, V)==dict)).
+-define(MOD(V), (get_type_handler(V))).
 -define(IS_BLANK(V), (V==undefined orelse V=="" orelse V==<<>>)).
 -define(IS_PROPLIST(V), (is_list(V) andalso is_tuple(hd(V)) andalso tuple_size(hd(V))==2)).
 
@@ -109,8 +108,8 @@ set(Obj,{Key,Val}) when is_list(Obj) ->
     [{Key,Val} | delete(Obj,Key)];
 set(Obj,{Key,Val}) when is_map(Obj) ->
     maps:put(Key, Val, Obj);
-set(Obj,{Key,Val}) when ?IS_DICT(Obj) ->
-    dict:store(Key, Val, Obj);
+set(Obj,{Key,Val}) ->
+    ?MOD(Obj):set(Obj, Key, Val);
 set(Obj,[]) ->
     Obj;
 set(Obj,[{Key,Val} | Rest]) ->
@@ -132,11 +131,8 @@ get(Obj,Key,Default) when is_list(Obj) ->
     proplists:get_value(Key,Obj,Default);
 get(Obj,Key,Default) when is_map(Obj) ->
     maps:get(Key,Obj,Default);
-get(Obj,Key,Default) when ?IS_DICT(Obj) ->
-    case dict:find(Key, Obj) of
-        {ok, Val} -> Val;
-        error -> Default
-    end.
+get(Obj,Key,Default) ->
+    ?MOD(Obj):get(Obj, Key, Default).
 
 -spec get(object(), key()) -> value().
 get(Obj,Key) ->
@@ -147,8 +143,8 @@ has_key(Obj,Key) when is_list(Obj) ->
     lists:keymember(Key,1,Obj);
 has_key(Obj,Key) when is_map(Obj) ->
     maps:is_key(Key, Obj);
-has_key(Obj,Key) when ?IS_DICT(Obj) ->
-    dict:is_key(Key, Obj).
+has_key(Obj,Key) ->
+    ?MOD(Obj):has_key(Obj, Key).
 
 -spec update(object(), key() | keys(), update_action()) -> object().
 update(Obj,[],_Updater) ->
@@ -242,9 +238,7 @@ map(Obj,Fun) when is_list(Obj) andalso is_function(Fun, 1) ->
     [{Key,Fun(Val)} || {Key,Val} <- Obj];
 map(Obj,Fun) when is_list(Obj) andalso is_function(Fun, 2) ->
     [{Key,Fun(Key, Val)} || {Key,Val} <- Obj];
-map(Obj,Fun) when is_map(Obj); ?IS_DICT(Obj)
-                  andalso (is_function(Fun, 1)
-                           orelse is_function(Fun, 2)) ->
+map(Obj,Fun) when (is_function(Fun, 1) orelse is_function(Fun, 2)) ->
     as_list(Obj, fun(List) -> map(List, Fun) end).
 
 -spec rekey(object(), FromKey :: key(), ToKey :: key()) -> object().
@@ -256,7 +250,7 @@ rekey(Obj,KeyMap) when is_list(Obj) ->
     lists:map(fun({K,V}) ->
         {rekey_swapkey(K,KeyMap),V}
     end,Obj);
-rekey(Obj,KeyMap) when is_map(Obj); ?IS_DICT(Obj) ->
+rekey(Obj,KeyMap) ->
     as_list(Obj, fun(List) -> rekey(List, KeyMap) end).
 
 rekey_swapkey(Current,KeyMap) ->
@@ -280,8 +274,8 @@ delete(Obj,Key) when is_list(Obj) ->
     lists:keydelete(Key, 1, Obj);
 delete(Obj,Key) when is_map(Obj) ->
     maps:remove(Key, Obj);
-delete(Obj,Key) when ?IS_DICT(Obj) ->
-    dict:erase(Key, Obj).
+delete(Obj,Key) ->
+    ?MOD(Obj):delete(Obj, Key).
 
 
 % Opposite of delete_list(): keeps all listed keys and removes all others
@@ -300,8 +294,8 @@ filter(Obj, Fun) when is_list(Obj) ->
     lists:filter(ListFun, Obj);
 filter(Obj, Fun) when is_map(Obj) ->
     maps:filter(Fun, Obj);
-filter(Obj, Fun) when ?IS_DICT(Obj) ->
-    dict:filter(Fun, Obj).
+filter(Obj, Fun) ->
+    ?MOD(Obj):filter(Obj, Fun).
     
 merge_full(ExtendedProplist) when ?IS_PROPLIST(ExtendedProplist) ->
     lists:foldl(fun
@@ -438,32 +432,23 @@ compare(A,B,[SortField|RestSorts]) ->
 %    Fun(Obj);
 as_list(Obj, Fun) when is_map(Obj) ->
     from_and_to_map(Obj, Fun);
-as_list(Obj, Fun) when ?IS_DICT(Obj) ->
-    from_and_to_dict(Obj, Fun).
+as_list(Obj, Fun) ->
+    ?MOD(Obj):from_and_to_this_type(Obj, Fun).
 
 -spec to_list(object()) -> proplist().
 to_list(Obj) when is_list(Obj) ->
     Obj;
 to_list(Obj) when is_map(Obj) ->
     maps:to_list(Obj);
-to_list(Obj) when ?IS_DICT(Obj) ->
-    dict:to_list(Obj).
-
--spec to_dict(object()) -> dict:dict().
-to_dict(Obj) when ?IS_DICT(Obj) ->
-    Obj;
-to_dict(Obj) when is_list(Obj) ->
-    dict:from_list(Obj);
-to_dict(Obj) when is_map(Obj) ->
-    List = maps:to_list(Obj),
-    dict:from_list(List).
+to_list(Obj) ->
+    ?MOD(Obj):to_list(Obj).
 
 -spec to_map(object()) -> map().
 to_map(Obj) when is_list(Obj) ->
     maps:from_list(Obj);
 to_map(Obj) when is_map(Obj) ->
     Obj;
-to_map(Obj) when ?IS_DICT(Obj) ->
+to_map(Obj) ->
     List = to_list(Obj),
     maps:from_list(List).
 
@@ -472,8 +457,10 @@ to_type(list, Obj) ->
     to_list(Obj);
 to_type(map, Obj) ->
     to_map(Obj);
-to_type(dict, Obj) ->
-    to_dict(Obj).
+to_type(Type, Obj) ->
+    Mod = get_type_handler_from_type_name(Type),
+    List = to_list(Obj),
+    Mod:from_list(List).
 
 %from_and_to_type(Fun, Obj) ->
 %    Type = type(Obj),
@@ -487,12 +474,6 @@ to_type(dict, Obj) ->
 %from_and_to_type(dict, Fun, Obj) ->
 %    from_and_to_dict(Fun, Obj).
 
--spec from_and_to_dict(dict:dict(), fun()) -> dict:dict().
-from_and_to_dict(Obj, Fun) ->
-    List = dict:to_list(Obj),
-    List2 = Fun(List),
-    dict:from_list(List2).
-
 from_and_to_map(Obj, Fun) ->
     List = maps:to_list(Obj),
     List2 = Fun(List),
@@ -503,8 +484,33 @@ type(Obj) when is_list(Obj) ->
     list;
 type(Obj) when is_map(Obj) ->
     map;
-type(Obj) when ?IS_DICT(Obj) ->
-    dict.
+type(Obj) ->
+    Mod = get_type_handler(Obj),
+    Mod:type().
+
+get_type_handler(Obj) ->
+    Mods = erlang_ds_register:get_type_handlers(),
+    get_type_handler(Obj, Mods).
+
+get_type_handler(Obj, [Mod|Mods]) ->
+    case Mod:is_type(Obj) of
+        true -> Mod;
+        false -> get_type_handler(Obj, Mods)
+    end;
+get_type_handler(Obj, []) ->
+    error({erlang_ds, {no_type_handler_for_this_object, Obj}}).
+
+get_type_handler_from_type_name(Type) ->
+    Mods = erlang_ds_register:get_type_handlers(),
+    get_type_handler_from_type_name(Type, Mods).
+
+get_type_handler_from_type_name(Type, [H|T]) ->
+    case H:type()==Type of
+        true -> H;
+        false -> get_type_handler_from_type_name(Type, T)
+    end;
+get_type_handler_from_type_name(Type, []) ->
+    error({unknown_type, Type}).
 
 
 -include_lib("eunit/include/eunit.hrl").
@@ -527,8 +533,9 @@ map_test_() ->
     obj_test_core(Obj).
 
 dict_test_() ->
+    ds:register_type_handler(erlang_ds_dict),
     Obj = base_dict(),
-    obj_test_core(Obj).
+    obj_test_core(Obj) ++ dict_test_core(Obj).
 
 obj_test_core(Obj) ->
     [   
@@ -552,6 +559,10 @@ obj_test_core(Obj) ->
         %% multiplifing the default values by themslves
         ?_assertEqual([1,4,9], get_list(transform(Obj, [{fun(X) -> X*X end, [a,b,c]}]), [a,b,c])),
         ?_assertEqual(list, type(to_list(Obj))),
-        ?_assertEqual(map, type(to_map(Obj))),
-        ?_assertEqual(dict, type(to_dict(Obj)))
+        ?_assertEqual(map, type(to_map(Obj)))
+    ].
+
+dict_test_core(Obj) ->
+    [
+        ?_assertEqual(dict, type(to_type(dict, Obj)))
     ].
