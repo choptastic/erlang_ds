@@ -1,10 +1,12 @@
 # Data Structure Agnostic Library for Erlang
 
-Introducing a simple library tailored for Erlang's common data structures
-(currently supporting proplists, dicts, and maps). With a universal interface,
-seamlessly convert between structures and harness additional functionalities
-not natively found in some, or even any, of these data types. Just "do the damn
-thing" without sweating about the underlying structure.
+Introducing a simple library tailored for Erlang's common key-value data
+structures.  Currently it ships supporting proplists and maps, with dict
+support provided with a built-in handler, and the handler system extends the
+supported types.  With a universal interface, seamlessly convert between
+structures and harness additional functionalities not natively found in some,
+or even any, of these data types. Just "do the damn thing" without sweating
+about the underlying structure.
 
 Contemplating an upgrade for a legacy app from proplists to maps? This tool's
 got your back. With `ds`, maintain consistent calls for a smooth, hassle-free
@@ -19,10 +21,12 @@ transition.
   adjacent to eachother is fully intentional for typing speed.
 * The supported structures are
   [maps](https://www.erlang.org/doc/man/maps.html),
-  [dicts](https://www.erlang.org/doc/man/dict.html), and `{Key,Value}` tuple
+  and `{Key,Value}` tuple
   lists, the latter generally referred in this document as
   [proplists](https://www.erlang.org/doc/man/proplists.html), although
   `{Key,Value}` tuple lists are technically only a subset of proplists.
+  [dicts](https://www.erlang.org/doc/man/dict.html) are also supported with the
+  use of handler module that's shipped with `erlang_ds`.
 * Calls are structure-agnostic with the supported types - meaning the calls
   will work regardless of the data structure type (as long as the type is
   supported).
@@ -119,14 +123,12 @@ paradigm.
 
 ### Conversion and Type-Checking
 
-* `ds:type(Obj)` - returns the type of data structure (`map`, `dict`, or
-  `list`).
+* `ds:type(Obj)` - returns the type of data structure (`map`, `list`, `dict`, etc).
 * `ds:to_list(Obj)` - Convert `Obj` to a proplist. If `Obj` is already a
   list, it returns it unchanged.
 * `ds:to_map(Obj)`: Convert `Obj` to a map. If `Obj` is already a map,
   returns it unchanged.
-* `ds:to_dict(Obj)`: Convert `Obj` to a dict. If `Obj` is already a dict,
-  returns it unchanged.
+* `ds:to_type(Type, Obj)`: Convert `Obj` to the provided `Type`.
 
 ### Comparison Helpers for Sorting lists of Objects
 
@@ -155,6 +157,30 @@ paradigm.
   encountered.
 * `ds:guess_merge(ObjA, ObjB)` - A shortcut for `ds:guess_merge([ObjA, ObjB)])`.
   It just merges two objects.
+
+## Expanding `erlang_ds` with new updaters
+
+
+
+## Expanding `erlang_ds` with new types
+
+Extending `erlang_ds` to support new data types is quite easy.
+
+Create a new module, add the attribute `-behavior(erlang_ds_type_handler).`
+
+And define the following functions:
+
+* `type() -> atom()`
+* `is_type(Obj) -> boolean()`
+* `set(Obj, Key, Val) -> NewObj`
+* `get(Obj, Key, DefaultValue) -> Val`
+* `has_key(Obj, Key) -> boolean()`
+* `delete(Obj, Key) -> NewObj`
+* `filter(Obj, Fun(K, V)) -> NewObject`
+* `to_list(Obj) -> Proplist`
+* `from_list(Proplist) -> Obj`
+
+(see `erlang_ds_dict.erl` for an example).
 
 ## Add to your rebar.config's deps section
 
@@ -204,6 +230,27 @@ Formerly known as `sigma_proplist`, Erlang DS originated from [Sigma Star
 Systems](https://sigma-star.com). After nearly a decade in production, it was
 refashioned to support more data structures, resulting in the Erlang DS we have
 today.
+
+## Versions
+
+### 0.2.0
+
+* Add type handler system (define your own types)
+* Move `dict` from natively being handled by `ds` to a separate `handler`.
+* Add custom updater registration system (define your own pre-built convenience
+  shortcuts for `update/3` and `transform/2`)
+* Now properly passing dialyzer tests
+
+### 0.1.1
+
+* Add support for `map` using fun with arity 2
+
+### 0.1.0
+
+* First version recommended for the public
+* Complete conversion from `sigma_proplist`
+* Add support for maps and dict natively.
+* Add tests and type specs
 
 ## About
 

@@ -279,7 +279,7 @@ keep(Obj,Keys) ->
 
 -spec filter(object(), fun()) -> object().
 filter(Obj, Fun) when is_list(Obj) ->
-    %% maps and dict filters use fun(K,V), while lists:filter would use
+    %% maps:filter use fun(K,V), while lists:filter would use
     %% fun({K,V}), so we need a translation
     ListFun = fun({K,V}) -> Fun(K,V) end,
     lists:filter(ListFun, Obj);
@@ -424,7 +424,7 @@ compare(A,B,[SortField|RestSorts]) ->
 as_list(Obj, Fun) when is_map(Obj) ->
     from_and_to_map(Obj, Fun);
 as_list(Obj, Fun) ->
-    ?MOD(Obj):from_and_to_this_type(Obj, Fun).
+    from_and_to_this_type(Obj, Fun).
 
 -spec to_list(object()) -> proplist().
 to_list(Obj) when is_list(Obj) ->
@@ -453,17 +453,12 @@ to_type(Type, Obj) ->
     List = to_list(Obj),
     Mod:from_list(List).
 
-%from_and_to_type(Fun, Obj) ->
-%    Type = type(Obj),
-%    from_and_to_type(Type, Fun, Obj).
-%
-%
-%from_and_to_type(list, Fun, Obj) ->
-%    Fun(Obj);
-%from_and_to_type(map, Fun, Obj) ->
-%    from_and_to_map(Fun, Obj);
-%from_and_to_type(dict, Fun, Obj) ->
-%    from_and_to_dict(Fun, Obj).
+%% Only uses the expansion mods
+from_and_to_this_type(Obj, Fun) ->
+    Mod = ?MOD(Obj),
+    List = Mod:to_list(Obj),
+    List2 = Fun(List),
+    Mod:from_list(List2).
 
 from_and_to_map(Obj, Fun) ->
     List = maps:to_list(Obj),

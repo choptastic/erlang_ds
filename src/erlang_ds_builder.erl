@@ -15,7 +15,7 @@ build(Updaters, TypeModules) ->
     TypeBody = type_body(TypeModules),
 
     Modtext = lists:flatten([Header, "\n", UpdaterBody, "\n", TypeBody]),
-    logger:warning("Module:~n~s",[Modtext]),
+    logger:info("Erlang DS Generated Module:~n~s",[Modtext]),
     Forms = merl:quote(Modtext),
     Res = merl:compile_and_load(Forms),
     case Res of

@@ -19,5 +19,3 @@
 
 -callback from_list(ds:proplist()) -> ds:object().
 
--callback from_and_to_this_type(ds:object(), fun()) -> ds:object().
-

@@ -10,8 +10,7 @@
     delete/2,
     filter/2,
     to_list/1,
-    from_list/1,
-    from_and_to_this_type/2
+    from_list/1
 ]).
 
 type() -> dict.
@@ -46,8 +45,3 @@ to_list(Obj) ->
 
 from_list(Obj) ->
     dict:from_list(Obj).
-
-from_and_to_this_type(Obj, Fun) ->
-    List = to_list(Obj),
-    Res = Fun(List),
-    from_list(Res).
