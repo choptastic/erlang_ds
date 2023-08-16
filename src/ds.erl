@@ -2,15 +2,6 @@
 %% MIT License
 -module(ds).
 
-%%% We're loosening up dialyzer a bit here because it doesn't like that we have
-%%% to pick apart dict as a tuple, and dialyzer really doesn't like that, since
-%%% dict:dict is an opaque type.
-%-dialyzer([
-%    no_opaque,
-%    no_underspecs,
-%    no_return
-%]).
-
 %% create custom type handlers that aren't `list` or `map`
 -export([
     register_type_handler/1,
