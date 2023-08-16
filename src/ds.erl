@@ -56,7 +56,7 @@
 -define(IS_BLANK(V), (V==undefined orelse V=="" orelse V==<<>>)).
 -define(IS_PROPLIST(V), (is_list(V) andalso is_tuple(hd(V)) andalso tuple_size(hd(V))==2)).
 
--type object() :: dict:dict() | list() | map().
+-type object() :: list() | map() | any().
 -type key() :: any().
 -type keys() :: [key()].
 -type value() :: any().
@@ -64,7 +64,7 @@
 -type default_value() :: value().
 -type key_value_tuple() :: {key(), value()}.
 -type key_value_tuples() :: [key_value_tuple()].
--type updater_key() :: any().
+-type updater_key() :: atom() | tuple().
 -type updater_mod_fun() :: {atom(), atom()}.
 -type update_action() :: function() | updater_mod_fun() | updater_key().
 -type transform_tuple() :: {update_action(), keys()}.
@@ -72,8 +72,19 @@
 -type key_map() :: [{key(), key()}].
 -type unmerged_object() :: object().
 -type proplist() :: [{key(), value()}].
--type obj_type() :: list | map | dict:dict().
+-type obj_type() :: list | map | atom().
 
+-export_type([
+    object/0,
+    key/0,
+    value/0,
+    default_value/0,
+    key_value_tuple/0,
+    updater_key/0,
+    updater_mod_fun/0,
+    proplist/0,
+    obj_type/0
+]).
 
 register_updater(UpdaterKey, MFA) ->
     erlang_ds_register:register_updater(UpdaterKey, MFA).
