@@ -2,6 +2,27 @@
 %% MIT License
 -module(ds).
 
+%% We're loosening up dialyzer a bit here because it doesn't like that we have
+%% to pick apart dict as a tuple, and dialyzer really doesn't like that, since
+%% dict:dict is an opaque type.
+-dialyzer([
+    no_opaque,
+    no_underspecs,
+    no_return
+]).
+
+%% create custom type handlers that aren't `list` or `map`
+-export([
+    register_type_handler/1,
+    unregister_type_handler/1
+]).
+
+%% create custom update
+-export([
+    register_updater/2,
+    unregister_updater/1
+]).
+
 -export([
     set/2,set/3,
     get/2,get/3,
@@ -27,12 +48,9 @@
     type/1,
     to_list/1,
     to_dict/1,
-    to_map/1
+    to_map/1,
+    to_type/2
 ]).
-
-% Can set with set(Proplist,Key,Val) or Set(PropList,{Key,Val}) or Set(Proplist,[{Key,Val},{Key,Val}])
-% retrieve values with get(Proplist,Key) or get(Proplist,Key,IfNotFound)
-% delete keys with delete(Proplist,Key)
 
 -define(IS_DICT(V), (is_tuple(V) andalso element(1, V)==dict)).
 -define(IS_BLANK(V), (V==undefined orelse V=="" orelse V==<<>>)).
@@ -46,12 +64,29 @@
 -type default_value() :: value().
 -type key_value_tuple() :: {key(), value()}.
 -type key_value_tuples() :: [key_value_tuple()].
--type transform_action() :: atom() | function().
--type transform_tuple() :: {transform_action(), keys()}.
+-type updater_key() :: any().
+-type updater_mod_fun() :: {atom(), atom()}.
+-type update_action() :: function() | updater_mod_fun() | updater_key().
+-type transform_tuple() :: {update_action(), keys()}.
 -type transform_list() :: [transform_tuple()].
 -type key_map() :: [{key(), key()}].
 -type unmerged_object() :: object().
 -type proplist() :: [{key(), value()}].
+-type obj_type() :: list | map | dict:dict().
+
+
+register_updater(UpdaterKey, MFA) ->
+    erlang_ds_register:register_updater(UpdaterKey, MFA).
+
+unregister_updater(UpdaterKey) ->
+    erlang_ds_register:unregister_updater(UpdaterKey).
+
+register_type_handler(Module) ->
+    erlang_ds_register:register_type_handler(Module).
+
+
+unregister_type_handler(Module) ->
+    erlang_ds_register:unregister_type_handler(Module).
 
 -spec set(object(), key(), value()) -> object().
 set(Obj,Key,Val) ->
@@ -104,15 +139,32 @@ has_key(Obj,Key) when is_map(Obj) ->
 has_key(Obj,Key) when ?IS_DICT(Obj) ->
     dict:is_key(Key, Obj).
 
--spec update(object(), key() | keys(), fun()) -> object().
-update(Obj,[],_FormatFun) ->
+-spec update(object(), key() | keys(), update_action()) -> object().
+update(Obj,[],_Updater) ->
     Obj;
-update(Obj,[Key|RestKeys],FormatFun) ->
-    NewObj = update(Obj,Key,FormatFun),
-    update(NewObj,RestKeys,FormatFun);
-update(Obj,Key,FormatFun) ->
-    NewVal = FormatFun(get(Obj,Key)),
-    set(Obj,Key,NewVal).
+update(Obj,[Key|RestKeys],Updater) ->
+    NewObj = update(Obj,Key,Updater),
+    update(NewObj,RestKeys,Updater);
+update(Obj,Key,Updater) when is_function(Updater) ->
+    NewVal = Updater(get(Obj,Key)),
+    set(Obj,Key,NewVal);
+update(Obj, Key, UpdaterKey) ->
+    %% Warning, potential for infinite loop here
+    Updater = updater_from_term(UpdaterKey),
+    update(Obj, Key, Updater).
+
+-spec updater_from_term(updater_mod_fun() | updater_key()) -> fun().
+updater_from_term(UpdaterKey = {Mod, Fun}) when is_atom(Mod), is_atom(Fun) ->
+    %% This is a special handler for {Mod,Fun}, but if Mod:Fun/1 isn't a
+    %% function, then treat it as an updater key
+    case erlang:function_exported(Mod, Fun, 1) of
+        true ->
+            fun Mod:Fun/1;
+        false ->
+            erlang_ds_register:get_updater(UpdaterKey)
+    end;
+updater_from_term(UpdaterKey) ->
+    erlang_ds_register:get_updater(UpdaterKey).
 
 -spec boolize(object(), keys()) -> object().
 boolize(Obj,Keys) ->
@@ -404,7 +456,7 @@ to_map(Obj) when ?IS_DICT(Obj) ->
     List = to_list(Obj),
     maps:from_list(List).
 
-
+-spec to_type(obj_type(), object()) -> object().
 to_type(list, Obj) ->
     to_list(Obj);
 to_type(map, Obj) ->
@@ -424,6 +476,7 @@ to_type(dict, Obj) ->
 %from_and_to_type(dict, Fun, Obj) ->
 %    from_and_to_dict(Fun, Obj).
 
+-spec from_and_to_dict(dict:dict(), fun()) -> dict:dict().
 from_and_to_dict(Obj, Fun) ->
     List = dict:to_list(Obj),
     List2 = Fun(List),
@@ -434,7 +487,7 @@ from_and_to_map(Obj, Fun) ->
     List2 = Fun(List),
     maps:from_list(List2).
 
--spec type(object()) -> list | map | dict.
+-spec type(object()) -> obj_type().
 type(Obj) when is_list(Obj) ->
     list;
 type(Obj) when is_map(Obj) ->
