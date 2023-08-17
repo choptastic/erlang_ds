@@ -53,7 +53,7 @@ bench() ->
 
 
 register_type_handler(Mod) when is_atom(Mod) ->
-    with_app_var(type_modules, [], fun(Mods) ->
+    with_app_var(type_handlers, [], fun(Mods) ->
         case lists:member(Mod, Mods) of
             true ->
                 Mods;
@@ -64,7 +64,7 @@ register_type_handler(Mod) when is_atom(Mod) ->
     build_lookup().
 
 unregister_type_handler(Mod) when is_atom(Mod) ->
-    with_app_var(type_modules, [], fun(Mods) ->
+    with_app_var(type_handlers, [], fun(Mods) ->
         Mods -- [Mod]
     end),
     build_lookup().
@@ -81,16 +81,9 @@ get_updater(UpdaterKey) ->
     end.
 
 
-register_updater(Key, {Mod, Fun}) when is_atom(Key), is_atom(Mod), is_atom(Fun) ->
-    register_updater({Key, 0}, {Mod, Fun, 1});
-register_updater(Key={KeyTag, KeyArgs}, MFA = {Mod, Fun, Args})
-  when is_atom(KeyTag), is_atom(Mod), is_atom(Fun), is_integer(Args), KeyArgs >=0, KeyArgs==Args-1 ->
-    store_updater(Key, MFA);
-register_updater({Key, KeyArgs}, MFA = {_, _, Args}) when KeyArgs =/= Args -1 ->
-    error({invalid_key_and_mfa_combo, [{key, Key}, {mfa, MFA}, {description, "KeyArgs needs to be exactly 1 fewer than the A (args) in the MFA tuple"}]});
-register_updater(Key, MFA) ->
-    error({invalid_key_and_mfa_combo, [{key, Key}, {mfa, MFA}, {description, "There is something wrong with the formatting of your MFA or your Key. Please review the specs for register_updater/2"}]}).
-
+register_updater(Key0, MFA0) ->
+    {Key, MFA} = ds_util:normalize_update_pair(Key0, MFA0),
+    store_updater(Key, MFA).
       
 store_updater(Key, MFA) ->
     with_app_var(updaters, [], fun(Updaters) ->

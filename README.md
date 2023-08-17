@@ -92,20 +92,20 @@ paradigm.
 
 ### Mass Updating
 
-* `ds:boolize(Obj, ListOfKeys)` - Convert the values in `Obj` associated with
-  each `Key` in `ListOfKeys` to a boolean
-* `ds:atomize(Obj, ListOfKeys)` - Convert the values in `Obj` associated with
-  each `Key` in `ListOfKeys` to an atom.
 * `ds:map(Obj, Fun)` - Run `Fun` on every entry in `Obj` and set each entry's
   new value to the return value from `Fun`. `Fun` can be defined as either
   `Fun(Value) -> NewValue` or `Fun(Key, Value) -> NewValue`, either way, the
   value of each entry will be set to `NewValue`.
-* `ds:update(Obj, ListOfKeys, Fun)` - Update the values in `Obj` associated
-  with each `Key` in `ListOfKeys` by running each associated value through
-  the provided `Fun(Value)`. For example, to convert a handful of values to
-  their integer forms (or `undefined` if not parseable), you could implement
+* `ds:update(Obj, ListOfKeys, Updater)` - Update the values in `Obj` associated
+  with each `Key` in `ListOfKeys` by running each associated value through the
+  provided `Updater`. `Updater` can be a function with arity-1 (e.g.
+  `Fun(Value)`), or it can be an atom or a tuple of the form
+  `{UpdaterName, Arg1, Arg2...}`. For example, to convert a handful of values
+  to their integer forms (or `undefined` if not parseable), you could implement
   it like this: `ds:update(Obj, ListOfKeys, fun(X) -> try list_to_integer(X)
-  catch _:_ -> undefined end)`
+  catch _:_ -> undefined end)`.  Two default built-in updaters are `atomize`
+  and `boolize`, which will convert terms to an atom or a boolean,
+  respectively.
 
 ### Transforming: Updating on Steroids
 
@@ -160,7 +160,81 @@ paradigm.
 
 ## Expanding `erlang_ds` with new updaters
 
+You can create your own custom updaters to be used with `ds:update/3` and
+`ds:transform/2`.
 
+To register a custom updater, you call can take 2 possible forms.
+
+### The full custom updater
+
+The more powerful updater format is this:
+
+`ds:register({UpdaterName, NumUpdaterArgs}, {Module, Function, NumArgs})`
+
+### Example
+
+If you regularly update values to be formatted as strings with something like
+this:
+
+```erlang
+FormatFun = fun(D) -> qdate:to_string("Y-m-d", D) end,
+ds:update(Obj, [signup_date, valid_date], FormatFun).
+```
+
+You could register a default formatter like this:
+
+```erlang
+ds:register_updater({format_date, 1}, {qdate, to_string, 2}).
+```
+
+Once that's done, you can do this call anywhere in your code:
+
+```erlang
+ds:update(Obj, [signup_date, valid_date], {format_date, "Y-m-d"}).
+```
+
+This is the same as calling `qdate:to_string("Y-m-d", X)` on the provided
+fields.
+
+### The simple custom updater
+
+If you have a basic updater you might use regularly (one that doesn't take
+additional arguments), you can use the short syntax for this.
+
+In the above case, let's say you also very regularly convert your values
+specifically to ISO-formatted strings, you could make a short version. Let's
+start by defining a basic module here:
+
+```erlang
+-module(my_formatter).
+-export([format_iso/1]).
+
+format_iso(D) ->
+	qdate:to_string("Y-m-d", D).
+```
+
+Now you can register this function with the shorter
+`ds:register_updater(UpdaterName, {Module, Function})`:
+
+```erlang
+ds:register_updater(iso_date, {my_formatter, format_iso}).
+```
+
+And you can then simply call this those fields to ISO dates.
+```erlang
+ds:update(Obj, [signup_date, valid_date], iso_date).
+```
+
+The observant reader may have noticed that the following are identical:
+
+```erlang
+ds:register_updater(UpdaterName, {Module, Function}).
+
+ds:register_updater({UpdaterName, 0}, {Module, Function, 1}).`
+```
+
+Worth noting is that `UpdaterArgs` must *always* be one less than the
+`FunctionArgs`.
 
 ## Expanding `erlang_ds` with new types
 

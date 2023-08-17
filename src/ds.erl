@@ -28,8 +28,6 @@
     rekey/3,
     keep/2,
 %   qry/2,
-    boolize/2,
-    atomize/2,
     transform/2,
     compare/3,
     merge/1,
@@ -164,19 +162,6 @@ updater_from_term(UpdaterKey = {Mod, Fun}) when is_atom(Mod), is_atom(Fun) ->
 updater_from_term(UpdaterKey) ->
     erlang_ds_register:get_updater(UpdaterKey).
 
--spec boolize(object(), keys()) -> object().
-boolize(Obj,Keys) ->
-    update(Obj,Keys,fun(V) ->
-        if
-            V==false;
-            V==0;
-            V=="0";
-            V==undefined;
-            V=="" -> false;
-            true -> true
-        end
-    end).
-
 %% DateFormat can be date, unixtime, or a binary/string formatted for use with qdate, or any other term registered as a format with qdate
 %% Requires qdate installed.
 %% If DateFormat cannot be handled, will instead 
@@ -190,16 +175,6 @@ format_date(Obj, Keys, DateFormat) ->
     end,
     update(Obj, Keys, UpdateFun).
 
--spec atomize(object(), keys()) -> object().
-atomize(Obj,Keys) ->
-    update(Obj,Keys,fun
-        (V) when is_list(V) -> list_to_atom(V);
-        (V) when is_atom(V) -> V;
-        (V) when is_binary(V) -> list_to_atom(binary_to_list(V));
-        (V) when is_integer(V) -> list_to_atom(integer_to_list(V));
-        (V) -> throw({cannot_convert_to_atom,V})
-    end).
-
 -spec transform(object(), transform_list()) -> object().
 transform(Obj,{date, Keys}) ->
     format_date(Obj, Keys, date);
@@ -210,10 +185,6 @@ transform(Obj,{now, Keys}) ->
 transform(Obj,{{date,DateFormat}, Keys}) ->
     format_date(Obj, Keys, DateFormat);
 
-transform(Obj,{boolize,Keys}) ->
-    boolize(Obj,Keys);
-transform(Obj,{atomize,Keys}) ->
-    atomize(Obj,Keys);
 transform(Obj,{Fun,Keys}) when is_function(Fun) ->
     update(Obj,Keys,Fun);
 transform(Obj,{DateFormat, Keys}) ->
@@ -501,7 +472,7 @@ get_type_handler_from_type_name(Type, []) ->
 
 -include_lib("eunit/include/eunit.hrl").
 
-base_pl() ->
+base_pl() -> 
     [{a,1},{b,2},{c,3}].
 
 base_map() ->
@@ -519,7 +490,6 @@ map_test_() ->
     obj_test_core(Obj).
 
 dict_test_() ->
-    ds:register_type_handler(erlang_ds_dict),
     Obj = base_dict(),
     obj_test_core(Obj) ++ dict_test_core(Obj).
 
@@ -544,6 +514,8 @@ obj_test_core(Obj) ->
         ?_assertEqual(4, get(update(Obj, b, fun(X) -> X*X end), b)), %% 2*2 = 4, duh,
         %% multiplifing the default values by themslves
         ?_assertEqual([1,4,9], get_list(transform(Obj, [{fun(X) -> X*X end, [a,b,c]}]), [a,b,c])),
+        ?_assertEqual(['1','2','3'], get_list(update(Obj, [a,b,c], atomize), [a,b,c])),
+        ?_assertEqual([false, true, true, true], get_list(update(set(Obj, z, 0), [z,a,b,c], boolize), [z,a,b,c])),
         ?_assertEqual(list, type(to_list(Obj))),
         ?_assertEqual(map, type(to_map(Obj)))
     ].
