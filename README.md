@@ -112,14 +112,8 @@ paradigm.
 * `ds:transform(Obj, TransformList)` - Run many different updates on `Obj`.
   `TransformList` is a list of `{Operation, ListOfKeys}` tuples. `Operation`
   can be a function that takes a single `Value` and returns a new `Value`, or
-  `Operation` can be any of the following terms: `atomize`, `boolize`,
-  `date`, `unixtime`, `now`, `{date, DateFormat}`. `ListOfKeys` is a list of
-  keys to convert. Returns the `Obj` with all the updates applied.  Bear in
-  mind, the date and time related functions all assume
-  [qdate](https://github.com/choptastic/qdate)
-  ([@hex.pm](https://hex.pm/packages/qdate)) is installed.  `qdate`, however
-  is not an automatic dependency because the rest of the module works without
-  it.
+  `Operation` can be any valid term used as an `Updater` in `ds:update/3`.
+  Returns the `Obj` with all the updates applied.
 
 ### Conversion and Type-Checking
 
