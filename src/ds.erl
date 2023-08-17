@@ -517,7 +517,15 @@ obj_test_core(Obj) ->
         ?_assertEqual(['1','2','3'], get_list(update(Obj, [a,b,c], atomize), [a,b,c])),
         ?_assertEqual([false, true, true, true], get_list(update(set(Obj, z, 0), [z,a,b,c], boolize), [z,a,b,c])),
         ?_assertEqual(list, type(to_list(Obj))),
-        ?_assertEqual(map, type(to_map(Obj)))
+        ?_assertEqual(map, type(to_map(Obj))),
+        % flatten is not added as a register
+        ?_assertError(_, get(update(set(Obj, s, [1, [2, "", [3]]]), s, flatten), s)),
+        ?_assertEqual(ok, register_updater(flatten, {lists, flatten})),
+        %% that string flattened is [1,2,3]
+        ?_assertEqual([1,2,3], get(update(set(Obj, s, [1, [2, "", [3]]]), s, flatten), s)),
+        ?_assertEqual(ok, unregister_updater(flatten)),
+        %% it should crash again because flatten doesn't exist anymore
+        ?_assertError(_, get(update(set(Obj, s, [1, [2, "", [3]]]), s, flatten), s))
     ].
 
 dict_test_core(Obj) ->

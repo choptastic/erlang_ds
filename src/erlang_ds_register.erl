@@ -53,7 +53,7 @@ bench() ->
 
 
 register_type_handler(Mod) when is_atom(Mod) ->
-    with_app_var(type_handlers, [], fun(Mods) ->
+    with_app_var(type_handlers, erlang_ds_build:default_type_modules(), fun(Mods) ->
         case lists:member(Mod, Mods) of
             true ->
                 Mods;
@@ -64,7 +64,7 @@ register_type_handler(Mod) when is_atom(Mod) ->
     build_lookup().
 
 unregister_type_handler(Mod) when is_atom(Mod) ->
-    with_app_var(type_handlers, [], fun(Mods) ->
+    with_app_var(type_handlers, erlang_ds_builder:default_type_modules(), fun(Mods) ->
         Mods -- [Mod]
     end),
     build_lookup().
@@ -82,17 +82,18 @@ get_updater(UpdaterKey) ->
 
 
 register_updater(Key0, MFA0) ->
-    {Key, MFA} = ds_util:normalize_update_pair(Key0, MFA0),
+    {Key, MFA} = ds_util:normalize_updater_pair(Key0, MFA0),
     store_updater(Key, MFA).
       
 store_updater(Key, MFA) ->
-    with_app_var(updaters, [], fun(Updaters) ->
-        [{Key, MFA} | Updaters]
+    with_app_var(updaters, erlang_ds_builder:default_updaters() , fun(Updaters) ->
+        ds:set(Updaters, Key, MFA)
     end),
     build_lookup().
 
-unregister_updater(Key) ->
-    with_app_var(updaters, [], fun(Updaters) ->
+unregister_updater(Key0) ->
+    Key = ds_util:normalize_updater_key(Key0),
+    with_app_var(updaters, erlang_ds_builder:default_updaters(), fun(Updaters) ->
         ds:delete(Updaters, Key)
     end),
     build_lookup().

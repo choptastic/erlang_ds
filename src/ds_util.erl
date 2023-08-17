@@ -3,6 +3,7 @@
 -export([
     to_bool/1,
     to_atom/1,
+    normalize_updater_key/1,
     normalize_updater_pair/2,
     normalize_updaters/1
 ]).
@@ -26,6 +27,12 @@ to_atom(V) when is_binary(V) -> list_to_atom(binary_to_list(V));
 to_atom(V) when is_integer(V) -> list_to_atom(integer_to_list(V));
 to_atom(V) -> throw({cannot_convert_to_atom,V}).
 
+normalize_updater_key(Key) when is_atom(Key) ->
+    {Key, 0};
+normalize_updater_key({Key, Int}) when is_atom(Key), is_integer(Int), Int>=0 ->
+    {Key, Int};
+normalize_updater_key(Key) ->
+    error({invalid_updater_key, Key}).
 
 normalize_updaters(Updaters) ->
     lists:map(fun({Key, MFA}) ->

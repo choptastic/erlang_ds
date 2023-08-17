@@ -1,5 +1,9 @@
 -module(erlang_ds_builder).
--export([build/0]).
+-export([
+    build/0,
+    default_updaters/0,
+    default_type_modules/0
+]).
 
 default_updaters() ->
     [
