@@ -117,7 +117,8 @@ paradigm.
 
 ### Conversion and Type-Checking
 
-* `ds:type(Obj)` - returns the type of data structure (`map`, `list`, `dict`, etc).
+* `ds:type(Obj)` - returns the type of data structure (`map`, `list`, `dict`,
+  etc).
 * `ds:to_list(Obj)` - Convert `Obj` to a proplist. If `Obj` is already a
   list, it returns it unchanged.
 * `ds:to_map(Obj)`: Convert `Obj` to a map. If `Obj` is already a map,
