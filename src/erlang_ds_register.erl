@@ -7,7 +7,6 @@
 
 -export([
     get_type_handlers/0,
-    %bench/0,
     register_type_handler/1,
     unregister_type_handler/1
 ]).
@@ -20,6 +19,11 @@
 
 -export([
     build_lookup/0
+]).
+
+%% only used for testing
+-export([
+    bench/0
 ]).
 
 get_type_handlers() ->

@@ -45,6 +45,7 @@ normalize_updater_pair(Key, {Mod, Fun, 1}) when is_atom(Key), is_atom(Mod), is_a
     {{Key, 0}, {Mod, Fun, 1}};
 normalize_updater_pair(Key, {Mod, Fun}) when is_atom(Key), is_atom(Mod), is_atom(Fun) ->
     {{Key, 0}, {Mod, Fun, 1}};
+
 normalize_updater_pair(Key={KeyTag, KeyArgs}, MFA = {Mod, Fun, Args})
   when is_atom(KeyTag), is_atom(Mod), is_atom(Fun), is_integer(Args), KeyArgs >=0, KeyArgs==Args-1 ->
     {Key, MFA};
@@ -60,11 +61,14 @@ normalize_updater_pair(Key, MFA={_, Fun, _}) when not(is_atom(Fun)) ->
 normalize_updater_pair(Key, MFA={_, _, Args}) when not(is_integer(Args)) ->
     Reason = fmt("Args (element 3 from the MFA tuple) (~p) must be an integer greater than or equal to 1", [Args]),
     invalid_update_pair(Key, MFA, Reason);
-normalize_updater_pair(Key={KeyTag, _}, MFA) when not(is_atom(Key)) ->
+normalize_updater_pair(Key={KeyTag, _}, MFA) when not(is_atom(KeyTag)) ->
     Reason = fmt("KeyTag (~p) must be an atom", [KeyTag]),
     invalid_update_pair(Key, MFA, Reason);
 normalize_updater_pair(Key={_, KeyArgs}, MFA) when not(is_integer(KeyArgs)) ->
     Reason = fmt("KeyArgs (~p) must be an integer", [KeyArgs]),
+    invalid_update_pair(Key, MFA, Reason);
+normalize_updater_pair(Key={_KeyTag, KeyArgs}, MFA={Mod, Fun}) ->
+    Reason = fmt("If the KeyArgs (~p) part of the Key (~p) is greater than 0, then MFA (~p) must be provided explicitly as a 3-tuple, specifying the arity (number of arguments) of the function call. Expected MFA value here is: {~p, ~p, ~p}", [KeyArgs, Key, MFA, Mod, Fun, KeyArgs+1]),
     invalid_update_pair(Key, MFA, Reason);
 normalize_updater_pair(Key, MFA) ->
     Reason = "There is something wrong with the formatting of your MFA or your Key. Please review the specs for register_updater/2",
