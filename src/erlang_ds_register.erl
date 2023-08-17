@@ -36,7 +36,7 @@ get_type_handlers() ->
     end.
 
 get_type_handlers_appvar() ->
-    application:get_env(erlang_ds, type_modules, []).
+    application:get_env(erlang_ds, type_handlers, []).
 
 %% To verify how much faster the module-based version is
 %% On my machine, module-based lookup is 5-12x faster
@@ -57,7 +57,7 @@ bench() ->
 
 
 register_type_handler(Mod) when is_atom(Mod) ->
-    with_app_var(type_handlers, erlang_ds_build:default_type_modules(), fun(Mods) ->
+    with_app_var(type_handlers, erlang_ds_builder:default_type_modules(), fun(Mods) ->
         case lists:member(Mod, Mods) of
             true ->
                 Mods;

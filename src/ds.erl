@@ -482,16 +482,33 @@ base_dict() ->
     dict:from_list(base_pl()).
 
 pl_test_() ->
+    application:load(erlang_ds),
     Obj = base_pl(),
     obj_test_core(Obj).
 
 map_test_() ->
+    application:load(erlang_ds),
     Obj = base_map(),
     obj_test_core(Obj).
 
 dict_test_() ->
+    application:load(erlang_ds),
     Obj = base_dict(),
-    obj_test_core(Obj) ++ dict_test_core(Obj).
+    obj_test_core(Obj).
+
+register_type_test_() ->
+    application:load(erlang_ds),
+    Obj = base_dict(),
+    register_type_test_core(Obj).
+
+register_type_test_core(Obj) ->
+    [
+        ?_assertEqual(dict, type(Obj)),
+        ?_assertEqual(ok, unregister_type_handler(erlang_ds_dict)),
+        ?_assertError(_, type(Obj)),
+        ?_assertEqual(ok, register_type_handler(erlang_ds_dict)),
+        ?_assertEqual(dict, type(Obj))
+    ].
 
 obj_test_core(Obj) ->
     [   
@@ -518,6 +535,7 @@ obj_test_core(Obj) ->
         ?_assertEqual([false, true, true, true], get_list(update(set(Obj, z, 0), [z,a,b,c], boolize), [z,a,b,c])),
         ?_assertEqual(list, type(to_list(Obj))),
         ?_assertEqual(map, type(to_map(Obj))),
+        ?_assertEqual(dict, type(to_type(dict, Obj))),
         % flatten is not added as a register
         ?_assertError(_, get(update(set(Obj, s, [1, [2, "", [3]]]), s, flatten), s)),
         ?_assertEqual(ok, register_updater(flatten, {lists, flatten})),
@@ -530,5 +548,4 @@ obj_test_core(Obj) ->
 
 dict_test_core(Obj) ->
     [
-        ?_assertEqual(dict, type(to_type(dict, Obj)))
     ].

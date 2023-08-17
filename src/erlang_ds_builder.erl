@@ -21,7 +21,8 @@ build() ->
         {ok, U} ->
             U;
         undefined ->
-            U = default_updaters(),    
+            U = default_updaters(),
+            application:set_env(erlang_ds, updaters, U),
             logger:notice("Erlang DS: No updaters defined in the application config.~nUsing the default: ~p",[U]),
             U
     end,
@@ -31,6 +32,7 @@ build() ->
             verify_type_handlers(T);
         undefined ->
             T = default_type_modules(),
+            application:set_env(erlang_ds, type_handlers, T),
             logger:notice("Erlang DS: No type_handlers defined in the application config.~nUsing the default: ~p",[T]),
             T
     end,
