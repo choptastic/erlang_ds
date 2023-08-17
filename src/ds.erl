@@ -545,7 +545,3 @@ obj_test_core(Obj) ->
         %% it should crash again because flatten doesn't exist anymore
         ?_assertError(_, get(update(set(Obj, s, [1, [2, "", [3]]]), s, flatten), s))
     ].
-
-dict_test_core(Obj) ->
-    [
-    ].
