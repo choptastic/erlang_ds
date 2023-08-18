@@ -161,16 +161,16 @@ updaters).
   ]).
   ```
 
-You can see with the above, and a relatively few lines of code, we've taken a
-record from the database, and formatted it to be something useful:
-* converted the `status` field to an atom
-* changed a handful of fields to a date format we want to use
-* converted the `is_active` field to a boolean, and
-* decrypted some data that we stored in an encrypted format in the database.
+  You can see with the above, and a relatively few lines of code, we've taken a
+  record from the database, and formatted it to be something useful:
+  * converted the `status` field to an atom
+  * changed a handful of fields to a date format we want to use
+  * converted the `is_active` field to a boolean, and
+  * decrypted some data that we stored in an encrypted format in the database.
 
-And because you can use a combination of custom updaters and anonymous function
-calls, you can see how this will help with productivity, as `ds` becomes a part
-of your coding patterns.
+  And because you can use a combination of custom updaters and anonymous function
+  calls, you can see how this will help with productivity, as `ds` becomes a part
+  of your coding patterns.
 
 ### Conversion and Type-Checking
 
