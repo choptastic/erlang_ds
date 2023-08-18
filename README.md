@@ -107,6 +107,36 @@ paradigm.
   and `boolize`, which will convert terms to an atom or a boolean,
   respectively.
 
+#### Built-In Special Updaters
+
+There are a few built-in custom updaters that can be enabled or disabled (see
+"Expanding `erlang_ds` with custom updaters for how to make your own custom
+updaters).
+
+**These updaters are enabled by default:**
+
+* `atomize` - This will convert the values to an atom. **Note:** this uses
+  `list_to_atom` and so if used indiscriminately, can lead to filling up the
+  atom table and crashing your node).
+* `boolize` - This will convert the values to a boolean. **Note:** This is
+  highly accepting of various terms that might *mean* false.  For example, the
+  following terms all evaluate to false: `0`, `"false"`, `""` (empty string or
+  empty list), `<<>>`, `"0"`, `undefined`.  Basically, if the term is zero,
+  empty, the word "false", or the atom `undefined`, it will evaluate to
+  `false`. All others evaluate to `true`. If this loose definition of `boolize`
+  is not acceptable to you, you are free to register your own (replacing an
+  updater with a new one is perfectly fine).
+
+**These qdate-based updaters are NOT enabled by default**
+
+* `date` - This converts the value to a `{date(), time()}` tuple.
+* `now` - This converts the value to an Erlang Timestamp in the `now()` format
+  (`{Megasecs, Seconds, Microsecs}`).
+* `unixtime` - This converts the value to a Unix timestamp (integer).
+* `{date, StringFormat}` - This converts to the provided value to the specified
+  date format as used by `qdate` (which follows the conventions of PHP's
+  `date()` function)
+
 ### Transforming: Updating on Steroids
 
 * `ds:transform(Obj, TransformList)` - Run many different updates on `Obj`.
@@ -114,6 +144,33 @@ paradigm.
   can be a function that takes a single `Value` and returns a new `Value`, or
   `Operation` can be any valid term used as an `Updater` in `ds:update/3`.
   Returns the `Obj` with all the updates applied.
+
+  As an example of why transforming is useful, you might have a function that
+  gets a value from the database, then does something to each field to format
+  it:
+
+```erlang
+%% get all the fields for a certain record from the person table
+Rec = db:map("select * from person where personid=?",[ID]).
+
+ds:transform(Rec, [
+	{atomize, [status]},
+	{{date, "Y-m-d"}, [date_of_birth, registration_date, expiration_date]},
+	{boolize, [is_active]},
+	{fun my_util:decrypt/1, [encrypted_data]}
+]).
+```
+
+You can see with the above, and a relatively few lines of code, we've taken a
+record from the database, and formatted it to be something useful:
+* converted the `status` field to an atom
+* changed a handful of fields to a date format we want to use
+* converted the `is_active` field to a boolean, and
+* decrypted some data that we stored in an encrypted format in the database.
+
+And because you can use a combination of custom updaters and anonymous function
+calls, you can see how this will help with productivity, as `ds` becomes a part
+of your coding patterns.
 
 ### Conversion and Type-Checking
 
@@ -153,14 +210,14 @@ paradigm.
 * `ds:guess_merge(ObjA, ObjB)` - A shortcut for `ds:guess_merge([ObjA, ObjB)])`.
   It just merges two objects.
 
-## Expanding `erlang_ds` with new updaters
+## Expanding `erlang_ds` with Custom Updaters
 
 You can create your own custom updaters to be used with `ds:update/3` and
 `ds:transform/2`.
 
 To register a custom updater, you call can take 2 possible forms.
 
-### The full custom updater
+### The Full Custom Updater
 
 The more powerful updater format is this:
 
@@ -191,7 +248,7 @@ ds:update(Obj, [signup_date, valid_date], {format_date, "Y-m-d"}).
 This is the same as calling `qdate:to_string("Y-m-d", X)` on the provided
 fields.
 
-### The simple custom updater
+### The Simple Custom Updater
 
 If you have a basic updater you might use regularly (one that doesn't take
 additional arguments), you can use the short syntax for this.
