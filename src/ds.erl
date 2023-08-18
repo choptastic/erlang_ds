@@ -40,6 +40,12 @@
     to_type/2
 ]).
 
+%% This is just for a test
+-export([
+    test_multiarg_updater/3,
+    test_subtract/2
+]).
+
 -define(MOD(V), (get_type_handler(V))).
 -define(IS_BLANK(V), (V==undefined orelse V=="" orelse V==<<>>)).
 -define(IS_PROPLIST(V), (is_list(V) andalso is_tuple(hd(V)) andalso tuple_size(hd(V))==2)).
@@ -162,33 +168,33 @@ updater_from_term(UpdaterKey = {Mod, Fun}) when is_atom(Mod), is_atom(Fun) ->
 updater_from_term(UpdaterKey) ->
     erlang_ds_register:get_updater(UpdaterKey).
 
-%% DateFormat can be date, unixtime, or a binary/string formatted for use with qdate, or any other term registered as a format with qdate
-%% Requires qdate installed.
-%% If DateFormat cannot be handled, will instead 
--spec format_date(object(), keys(), DateFormat :: unixtime | date | now | any()) -> object().
-format_date(Obj, Keys, DateFormat) ->
-    UpdateFun = case DateFormat of
-        unixtime -> fun(D) -> try qdate:to_unixtime(D) catch _:_ -> 0 end end;
-        date -> fun(D) -> try qdate:to_date(D) catch _:_ -> {{1970,1,1},{0,0,0}} end end;
-        now -> fun(D) -> try qdate:to_now(D) catch _:_ -> {0,0,0} end end;
-        Format -> fun(D) -> try qdate:to_string(Format, D) catch _:_ -> "Invalid Format" end end
-    end,
-    update(Obj, Keys, UpdateFun).
+%%% DateFormat can be date, unixtime, or a binary/string formatted for use with qdate, or any other term registered as a format with qdate
+%%% Requires qdate installed.
+%%% If DateFormat cannot be handled, will instead 
+%-spec format_date(object(), keys(), DateFormat :: unixtime | date | now | any()) -> object().
+%format_date(Obj, Keys, DateFormat) ->
+%    UpdateFun = case DateFormat of
+%        unixtime -> fun(D) -> try qdate:to_unixtime(D) catch _:_ -> 0 end end;
+%        date -> fun(D) -> try qdate:to_date(D) catch _:_ -> {{1970,1,1},{0,0,0}} end end;
+%        now -> fun(D) -> try qdate:to_now(D) catch _:_ -> {0,0,0} end end;
+%        Format -> fun(D) -> try qdate:to_string(Format, D) catch _:_ -> "Invalid Format" end end
+%    end,
+%    update(Obj, Keys, UpdateFun).
 
 -spec transform(object(), transform_list()) -> object().
-transform(Obj,{date, Keys}) ->
-    format_date(Obj, Keys, date);
-transform(Obj,{unixtime, Keys}) ->
-    format_date(Obj, Keys, unixtime);
-transform(Obj,{now, Keys}) ->
-    format_date(Obj, Keys, now);
-transform(Obj,{{date,DateFormat}, Keys}) ->
-    format_date(Obj, Keys, DateFormat);
+%transform(Obj,{date, Keys}) ->
+%    format_date(Obj, Keys, date);
+%transform(Obj,{unixtime, Keys}) ->
+%    format_date(Obj, Keys, unixtime);
+%transform(Obj,{now, Keys}) ->
+%    format_date(Obj, Keys, now);
+%transform(Obj,{{date,DateFormat}, Keys}) ->
+%    format_date(Obj, Keys, DateFormat);
 
-transform(Obj,{Fun,Keys}) when is_function(Fun) ->
+transform(Obj,{Fun,Keys}) ->
     update(Obj,Keys,Fun);
-transform(Obj,{DateFormat, Keys}) ->
-    format_date(Obj, Keys, DateFormat);
+%transform(Obj,{DateFormat, Keys}) ->
+%    format_date(Obj, Keys, DateFormat);
 
 transform(Obj,Map) when is_list(Map) ->
     lists:foldl(fun(Action,Acc) ->
@@ -472,8 +478,15 @@ get_type_handler_from_type_name(Type, []) ->
 
 -include_lib("eunit/include/eunit.hrl").
 
+-define(NON_ATOM_KEY, {non_atom_key}).
+
 base_pl() -> 
-    [{a,1},{b,2},{c,3}].
+    [
+        {a,1},
+        {b,2},
+        {c,3},
+        {{non_atom_key}, [1,[2,"",[3]]]}
+    ].
 
 base_map() ->
     maps:from_list(base_pl()).
@@ -536,12 +549,36 @@ obj_test_core(Obj) ->
         ?_assertEqual(list, type(to_list(Obj))),
         ?_assertEqual(map, type(to_map(Obj))),
         ?_assertEqual(dict, type(to_type(dict, Obj))),
-        % flatten is not added as a register
-        ?_assertError(_, get(update(set(Obj, s, [1, [2, "", [3]]]), s, flatten), s)),
+        % flatten is not added as a registered updater yet, and the update should crash
+        ?_assertError(_, update(Obj, ?NON_ATOM_KEY, flatten)),
         ?_assertEqual(ok, register_updater(flatten, {lists, flatten})),
         %% that string flattened is [1,2,3]
-        ?_assertEqual([1,2,3], get(update(set(Obj, s, [1, [2, "", [3]]]), s, flatten), s)),
-        ?_assertEqual(ok, unregister_updater(flatten)),
+        ?_assertEqual([1,2,3], get(update(Obj, ?NON_ATOM_KEY, flatten), ?NON_ATOM_KEY)),
+        ?_assertEqual(ok, register_updater({pow_minus, 2}, {?MODULE, test_multiarg_updater, 3})),
+        ?_assertEqual(ok, register_updater({subtract, 1}, {?MODULE, test_subtract, 2})),
+        %% the value of c is 3. Test is 3^4-1 should = 80
+        ?_assertEqual(80, get(update(Obj, c, {pow_minus, 4, 1}), c)),
+
+        %% testing a big transform
+        %% a: 1 -(to_atom)-> '1'
+        %% b: 2 -(minus 5)-> -3
+        %% c: 3 -(^5 minus 43)-> 200
+        %% ?NON_ATOM_KEY: (crazy list) -> (flattened) -> [1,2,3]
+        ?_assertEqual(['1',-3, 200, [1,2,3]], get_list(transform(Obj, [
+            {atomize, [a]},
+            {{subtract, 5}, [b]},
+            {{pow_minus, 5, 43}, [c]},
+            {flatten, [?NON_ATOM_KEY]}
+        ]), [a,b,c,?NON_ATOM_KEY])),
         %% it should crash again because flatten doesn't exist anymore
-        ?_assertError(_, get(update(set(Obj, s, [1, [2, "", [3]]]), s, flatten), s))
+        ?_assertEqual(ok, unregister_updater(flatten)),
+        ?_assertError(_, update(Obj, ?NON_ATOM_KEY, flatten))
     ].
+
+
+test_multiarg_updater(Exponent, Subtract, Val) ->
+    round(math:pow(Val, Exponent) - Subtract).
+
+%% Arg order is important here so Doing X, Val. Result will be Val - X
+test_subtract(X, Val) ->
+    Val - X.
