@@ -293,6 +293,8 @@ Worth noting is that `UpdaterArgs` must *always* be one less than the
 Extending `erlang_ds` to support new data types is quite easy.
 
 Create a new module, add the attribute `-behavior(erlang_ds_type_handler).`
+(see [`erlang_ds_type_handler.erl`](https://github.com/choptastic/erlang_ds/blob/master/src/erlang_ds_type_handler.erl)
+for behavior callback details).
 
 And define the following functions:
 
@@ -306,7 +308,7 @@ And define the following functions:
 * `to_list(Obj) -> Proplist`
 * `from_list(Proplist) -> Obj`
 
-(see `erlang_ds_dict.erl` for an example).
+([see `erlang_ds_dict.erl` for an example](https://github.com/choptastic/erlang_ds/blob/master/src/erlang_ds_dict.erl)).
 
 ## Add to your rebar.config's deps section
 
