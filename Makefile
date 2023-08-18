@@ -12,3 +12,6 @@ publish:
 
 shell:
 	rebar3 shell
+
+push:
+	git push origin master
