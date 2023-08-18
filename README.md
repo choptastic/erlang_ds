@@ -149,17 +149,17 @@ updaters).
   gets a value from the database, then does something to each field to format
   it:
 
-```erlang
-%% get all the fields for a certain record from the person table
-Rec = db:map("select * from person where personid=?",[ID]).
-
-ds:transform(Rec, [
-	{atomize, [status]},
-	{{date, "Y-m-d"}, [date_of_birth, registration_date, expiration_date]},
-	{boolize, [is_active]},
-	{fun my_util:decrypt/1, [encrypted_data]}
-]).
-```
+  ```erlang
+  %% get all the fields for a certain record from the person table
+  Rec = db:map("select * from person where personid=?",[ID]).
+  
+  ds:transform(Rec, [
+  	{atomize, [status]},
+  	{{date, "Y-m-d"}, [date_of_birth, registration_date, expiration_date]},
+  	{boolize, [is_active]},
+  	{fun my_util:decrypt/1, [encrypted_data]}
+  ]).
+  ```
 
 You can see with the above, and a relatively few lines of code, we've taken a
 record from the database, and formatted it to be something useful:
