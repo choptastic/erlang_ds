@@ -14,7 +14,9 @@
 -export([
     get_updater/1,
     register_updater/2,
-    unregister_updater/1
+    register_updaters/1,
+    unregister_updater/1,
+    unregister_updaters/1
 ]).
 
 -export([
@@ -88,10 +90,21 @@ get_updater(UpdaterKey) ->
 register_updater(Key0, MFA0) ->
     {Key, MFA} = ds_util:normalize_updater_pair(Key0, MFA0),
     store_updater(Key, MFA).
+
+register_updaters(KeyMFAs) ->
+    Updaters = ds_util:normalize_updaters(KeyMFAs),
+    store_updaters(Updaters).
+
       
 store_updater(Key, MFA) ->
-    with_app_var(updaters, erlang_ds_builder:default_updaters() , fun(Updaters) ->
+    with_app_var(updaters, erlang_ds_builder:default_updaters(), fun(Updaters) ->
         ds:set(Updaters, Key, MFA)
+    end),
+    build_lookup().
+
+store_updaters(NewUpdaters) ->
+    with_app_var(updaters, erlang_ds_builder:default_updaters(), fun(Updaters) ->
+        ds:set(Updaters, NewUpdaters)
     end),
     build_lookup().
 
@@ -102,6 +115,12 @@ unregister_updater(Key0) ->
     end),
     build_lookup().
 
+unregister_updaters(Keys0) ->
+    Keys = [ds_util:normalize_updater_key(K) || K <- Keys0],
+    with_app_var(updaters, erlang_ds_builder:default_updaters(), fun(Updaters) ->
+        ds:delete_list(Updaters, Keys)
+    end),
+    build_lookup().
 
 build_lookup() ->
     erlang_ds_builder:build().

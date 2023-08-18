@@ -11,7 +11,14 @@
 %% create custom update
 -export([
     register_updater/2,
-    unregister_updater/1
+    register_updaters/1,
+    unregister_updater/1,
+    unregister_updaters/1
+]).
+
+-export([
+    register_qdate_updaters/0,
+    unregister_qdate_updaters/0
 ]).
 
 -export([
@@ -83,15 +90,28 @@
 register_updater(UpdaterKey, MFA) ->
     erlang_ds_register:register_updater(UpdaterKey, MFA).
 
+register_updaters(KeyMFAs) ->
+    erlang_ds_register:register_updaters(KeyMFAs).
+
+unregister_updaters(Keys) ->
+    erlang_ds_register:unregister_updaters(Keys).
+
 unregister_updater(UpdaterKey) ->
     erlang_ds_register:unregister_updater(UpdaterKey).
 
 register_type_handler(Module) ->
     erlang_ds_register:register_type_handler(Module).
 
-
 unregister_type_handler(Module) ->
     erlang_ds_register:unregister_type_handler(Module).
+
+
+register_qdate_updaters() ->
+    erlang_ds_qdate_updaters:register_updaters().
+
+unregister_qdate_updaters() ->
+    erlang_ds_qdate_updaters:unregister_updaters().
+
 
 -spec set(object(), key(), value()) -> object().
 set(Obj,Key,Val) ->
@@ -168,33 +188,9 @@ updater_from_term(UpdaterKey = {Mod, Fun}) when is_atom(Mod), is_atom(Fun) ->
 updater_from_term(UpdaterKey) ->
     erlang_ds_register:get_updater(UpdaterKey).
 
-%%% DateFormat can be date, unixtime, or a binary/string formatted for use with qdate, or any other term registered as a format with qdate
-%%% Requires qdate installed.
-%%% If DateFormat cannot be handled, will instead 
-%-spec format_date(object(), keys(), DateFormat :: unixtime | date | now | any()) -> object().
-%format_date(Obj, Keys, DateFormat) ->
-%    UpdateFun = case DateFormat of
-%        unixtime -> fun(D) -> try qdate:to_unixtime(D) catch _:_ -> 0 end end;
-%        date -> fun(D) -> try qdate:to_date(D) catch _:_ -> {{1970,1,1},{0,0,0}} end end;
-%        now -> fun(D) -> try qdate:to_now(D) catch _:_ -> {0,0,0} end end;
-%        Format -> fun(D) -> try qdate:to_string(Format, D) catch _:_ -> "Invalid Format" end end
-%    end,
-%    update(Obj, Keys, UpdateFun).
-
 -spec transform(object(), transform_list()) -> object().
-%transform(Obj,{date, Keys}) ->
-%    format_date(Obj, Keys, date);
-%transform(Obj,{unixtime, Keys}) ->
-%    format_date(Obj, Keys, unixtime);
-%transform(Obj,{now, Keys}) ->
-%    format_date(Obj, Keys, now);
-%transform(Obj,{{date,DateFormat}, Keys}) ->
-%    format_date(Obj, Keys, DateFormat);
-
 transform(Obj,{Fun,Keys}) ->
     update(Obj,Keys,Fun);
-%transform(Obj,{DateFormat, Keys}) ->
-%    format_date(Obj, Keys, DateFormat);
 
 transform(Obj,Map) when is_list(Map) ->
     lists:foldl(fun(Action,Acc) ->
