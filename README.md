@@ -1,4 +1,4 @@
-# Data Structure Agnostic Library for Erlang
+# Data Structure Agnostic Key-Value Library for Erlang
 
 Introducing a simple library tailored for Erlang's common key-value data
 structures.  Currently it ships supporting proplists, maps, and dicts (with a
@@ -12,8 +12,13 @@ Contemplating an upgrade for a legacy app from proplists to maps? This tool's
 got your back. With `ds`, maintain consistent calls for a smooth, hassle-free
 transition.
 
+## Important Links
 
-## Key Points to Remember:
+* [Announcement on the Erlang Forums](https://erlangforums.com/t/2813)
+* [Github](https://github.com/choptastic/erlang_ds)
+* [Hex](https://hex.pm/packages/erlang_ds)
+
+## Key Points to Remember
 
 * The central module is `ds`. For instance, to fetch values, use `ds:get`.
 * Calls are designed for brevity. Hence, `ds:get` is favored over
@@ -361,38 +366,12 @@ today.
 
 ## Versions
 
-### 0.2.0
-
-* Add type handler system (define your own types).
-* Move `dict` from natively being handled by `ds` to a separate type handler
-  (that is loaded and enabled by default).
-* Add custom updater registration system (define your own convenience
-  shortcuts for `update/3` and `transform/2`).
-* Move the qdate functionality into its own module as custom updaters. You can
-  enable the qdate functionality with: `ds:register_qdate_updaters()` and
-  `ds:unregister_qdate_updaters()`. By default, the qdate functionality is not
-  loaded/enabled.
-* Move `atomize` and `boolize` out of the core functionality and added as
-  pre-built (and pre-loaded) updaters.  Remove `ds:atomize` and `ds:boolize` as functions. If
-  you need them, use `ds:update(Obj, Keys, atomize)` or `ds:update(OBj, Keys,
-  boolize)`.
-* Now properly passing dialyzer tests.
-
-### 0.1.1
-
-* Add support for `map` using fun with arity 2
-
-### 0.1.0
-
-* First version ready for public consumption.
-* Complete conversion from `sigma_proplist`.
-* Add support for maps and dict natively.
-* Add tests and type specs.
+[See Changelog](https://github.com/choptastic/erlang_ds/blob/master/CHANGELOG.md)
 
 ## About
 
 Author: [Jesse Gumm](https://jessegumm.com)
 
-Copyright 2013-2023
+Copyright 2013-2023, Jesse Gumm
 
-MIT License
+[MIT License](https://github.com/choptastic/erlang_ds/blob/master/LICENSE.md)
