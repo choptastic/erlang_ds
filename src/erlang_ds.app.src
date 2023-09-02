@@ -1,7 +1,7 @@
 {application, erlang_ds,
  [
   {description, "Work with common erlang data structures (map, dict, proplist, etc)"},
-  {vsn, "0.2.1"},
+  {vsn, "0.2.2"},
   {registered, []},
   {applications, [
                   kernel,

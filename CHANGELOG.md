@@ -1,5 +1,11 @@
 # Erlang DS Change Log
 
+## 0.2.2
+
+* Update `set/2` such that the second argument can be another object (not just
+  a key-value-list). Semantically, this makes it similar to `guess_merge/2`,
+  with the argument order flipped.
+
 ## 0.2.1
 
 * Fix the hex listing so its not depending on qdate
