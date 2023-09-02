@@ -6,6 +6,10 @@
   a key-value-list). Semantically, this makes it similar to `guess_merge/2`,
   with the argument order flipped.  Because this adds new functionality, and is
   not just a fix, it's treated as a minor version.
+* Incorporated [`rebar3.mk`](https://github.com/choptastic/rebar3.mk) into the
+  `Makefile`.  This, obviously, will have no impact on the use of `erlang_ds`
+  as a dependency.
+
 
 ## 0.2.1
 
