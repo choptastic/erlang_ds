@@ -117,7 +117,7 @@ unregister_qdate_updaters() ->
 set(Obj,Key,Val) ->
     set(Obj,{Key,Val}).
 
--spec set(object(), key_value_tuple() | key_value_tuples()) -> object().
+-spec set(object(), key_value_tuple() | key_value_tuples() | object()) -> object().
 set(Obj,{Key,Val}) when is_list(Obj) ->
     % delete a matching key if exists and prepend {K,V} to the list. No guarantee of proplist order
     [{Key,Val} | delete(Obj,Key)];
@@ -129,7 +129,11 @@ set(Obj,[]) ->
     Obj;
 set(Obj,[{Key,Val} | Rest]) ->
     NewObj = set(Obj,{Key,Val}),
-    set(NewObj,Rest).
+    set(NewObj,Rest);
+set(Obj,OtherObj) ->
+    OtherPL = to_list(OtherObj),
+    set(Obj, OtherPL).
+
 
 % Will get a list of values in the order specified in the "Keys" argument
 -spec get_list(object(), keys(), default_value()) -> values().
