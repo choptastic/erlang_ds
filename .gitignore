@@ -16,3 +16,4 @@ rel/rebar
 rel/overlay/common/rebar
 thanks.txt
 deps/
+rebar3.mk
