@@ -1,10 +1,11 @@
 # Erlang DS Change Log
 
-## 0.2.2
+## 0.3.0
 
 * Update `set/2` such that the second argument can be another object (not just
   a key-value-list). Semantically, this makes it similar to `guess_merge/2`,
-  with the argument order flipped.
+  with the argument order flipped.  Because this adds new functionality, and is
+  not just a fix, it's treated as a minor version.
 
 ## 0.2.1
 
