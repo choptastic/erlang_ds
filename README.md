@@ -101,6 +101,9 @@ paradigm.
   new value to the return value from `Fun`. `Fun` can be defined as either
   `Fun(Value) -> NewValue` or `Fun(Key, Value) -> NewValue`, either way, the
   value of each entry will be set to `NewValue`.
+* `ds:foreach(Obj, Fun)` similar to `ds:map/2`, but since it only traverses
+  the object to maybe generate a side effect for each element, the resulting
+  list is discarded and only return `ok`.
 * `ds:update(Obj, ListOfKeys, Updater)` - Update the values in `Obj` associated
   with each `Key` in `ListOfKeys` by running each associated value through the
   provided `Updater`. `Updater` can be a function with arity-1 (e.g.

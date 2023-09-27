@@ -30,6 +30,7 @@
     delete_list/2,
     update/3,
     map/2,
+    foreach/2,
     filter/2,
     rekey/2,
     rekey/3,
@@ -208,6 +209,17 @@ map(Obj,Fun) when is_list(Obj) andalso is_function(Fun, 2) ->
     [{Key,Fun(Key, Val)} || {Key,Val} <- Obj];
 map(Obj,Fun) when (is_function(Fun, 1) orelse is_function(Fun, 2)) ->
     as_list(Obj, fun(List) -> map(List, Fun) end).
+
+-spec foreach(object(), fun()) -> object().
+foreach(Obj,Fun) when is_list(Obj) andalso is_function(Fun, 1) ->
+    lists:foreach(Fun, Obj);
+foreach(Obj,Fun) when is_list(Obj) andalso is_function(Fun, 2) ->
+    ListFun = fun({K,V}) -> Fun(K,V) end,
+    lists:foreach(ListFun, Obj);
+foreach(Obj,Fun) when is_map(Obj) andalso is_function(Fun, 2) ->
+    maps:foreach(Fun, Obj);
+foreach(Obj,Fun) when (is_function(Fun, 1) orelse is_function(Fun, 2)) ->
+    as_list_foreach(Obj, fun(List) -> foreach(List, Fun) end).
 
 -spec rekey(object(), FromKey :: key(), ToKey :: key()) -> object().
 rekey(Obj,FromKey,ToKey) ->
@@ -403,6 +415,14 @@ as_list(Obj, Fun) when is_map(Obj) ->
 as_list(Obj, Fun) ->
     from_and_to_this_type(Obj, Fun).
 
+as_list_foreach(Obj, Fun) when is_list(Obj) ->
+    Fun(Obj),
+    ok;
+as_list_foreach(Obj, Fun) ->
+    List = to_list(Obj),
+    Fun(List),
+    ok.
+
 -spec to_list(object()) -> proplist().
 to_list(Obj) when is_list(Obj) ->
     Obj;
@@ -539,6 +559,10 @@ obj_test_core(Obj) ->
         ?_assertEqual(["", "", 3], get_list(delete_list(Obj, [a,b]), [a,b,c])),
         ?_assertEqual([1, "", 3], get_list(keep(Obj, [a,c]), [a,b,c])),
         ?_assertEqual("", get(delete(Obj, x), x)), %% just showing it doesn't crash
+        ?_assertEqual(ok, ds:foreach([{1,1},{2,2},{3,3}], fun(X, Y) -> X = Y end)),
+        ?_assertEqual(ok, ds:foreach([{1,1},{2,2},{3,3}], fun({X, Y}) -> X = Y end)),
+        ?_assertEqual(ok, ds:foreach(#{1 => 1, 2 => 2, 3 => 3}, fun(X, Y) -> X = Y end)),
+        ?_assertEqual(ok, ds:foreach(#{1 => 1, 2 => 2, 3 => 3}, fun({X, Y}) -> X = Y end)),
         ?_assertEqual([1,2,3,10,11], get_list(set(Obj, [{j,10},{k,11}]), [a,b,c,j,k])),
         ?_assertEqual(["","","",1,2,3], get_list(rekey(Obj, [{a, x}, {b, y}, {c, z}]), [a,b,c,x,y,z])),
         ?_assertEqual(4, get(update(Obj, b, fun(X) -> X*X end), b)), %% 2*2 = 4, duh,
