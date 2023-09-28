@@ -210,7 +210,7 @@ map(Obj,Fun) when is_list(Obj) andalso is_function(Fun, 2) ->
 map(Obj,Fun) when (is_function(Fun, 1) orelse is_function(Fun, 2)) ->
     as_list(Obj, fun(List) -> map(List, Fun) end).
 
--spec foreach(object(), fun()) -> object().
+-spec foreach(object(), fun()) -> ok.
 foreach(Obj,Fun) when is_list(Obj) andalso is_function(Fun, 1) ->
     lists:foreach(Fun, Obj);
 foreach(Obj,Fun) when is_list(Obj) andalso is_function(Fun, 2) ->
