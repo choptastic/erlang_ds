@@ -1,4 +1,8 @@
-# Erlang DS Change Log
+# Erlang DS Changelog
+
+## 0.4.0 (In progress)
+
+* Added `foreach/2` (Thanks @davidcaos)
 
 ## 0.3.0
 
