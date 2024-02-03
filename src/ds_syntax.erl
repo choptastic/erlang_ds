@@ -4,7 +4,7 @@
 -module(ds_syntax).
 
 %% API exports
--export([parse_transform/2, init/0, arrow/1, bracket/1, is_initialized/1]).
+-export([parse_transform/2, init/0, arrow/1, bracket/1, is_initialized/0]).
 
 -compile({nowarn_unused_function, log/1}).
 -compile({nowarn_unused_function, log/2}).
