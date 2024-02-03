@@ -17,3 +17,5 @@ rel/overlay/common/rebar
 thanks.txt
 deps/
 rebar3.mk
+_build/
+doc/

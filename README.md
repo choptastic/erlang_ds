@@ -47,6 +47,29 @@ transition.
   empty string (`""`) or an empty list (`[]`). If this isn't favorable, we're
   open to making it configurable.
 
+## Modified Syntax Plugin (*experimental*/optional)
+
+Erlang DS comes with an optional modification to the Erlang syntax to satisfy
+those who thrive on brevity, while also making the `get` syntax more familiar
+to non-Erlang developers.
+
+With this syntax plugin enabled, the following calls are equivalent:
+
+```erlang
+X = Obj->key.
+X = ds:get(Obj, key).
+```
+
+And these two calls are equivalent:
+
+```erlang
+[A,B,C] = Obj->[key1, key2, key3].
+[A,B,C] = ds:get_list(Obj, [key1, key2, key3]).
+```
+
+For more information, see the "Adding the Syntax Plugin" section at the bottom
+of this page. Please note this functionality is *experimental*.
+
 ## Function Reference
 
 **Reference Preface 1:** When we mention "object" or `Obj`, we're referring to
@@ -162,10 +185,10 @@ updaters).
   Rec = db:map("select * from person where personid=?",[ID]).
   
   ds:transform(Rec, [
-  	{atomize, [status]},
-  	{{date, "Y-m-d"}, [date_of_birth, registration_date, expiration_date]},
-  	{boolize, [is_active]},
-  	{fun my_util:decrypt/1, [encrypted_data]}
+    {atomize, [status]},
+    {{date, "Y-m-d"}, [date_of_birth, registration_date, expiration_date]},
+    {boolize, [is_active]},
+    {fun my_util:decrypt/1, [encrypted_data]}
   ]).
   ```
 
@@ -270,7 +293,7 @@ start by defining a basic module here:
 -export([format_iso/1]).
 
 format_iso(D) ->
-	qdate:to_string("Y-m-d", D).
+    qdate:to_string("Y-m-d", D).
 ```
 
 Now you can register this function with the shorter
@@ -326,6 +349,115 @@ And define the following functions:
 ]}.
 ```
 
+## Adding the SyntPlugin
+
+
+If you want to add Erlang DS's syntax customizations to your app, doing so is very easy:
+
+1. Add the following line to your somewhere above your function definitions:
+
+   ```erlang
+   -compile({parse_transform, ds_syntax}).
+   ```
+
+2. Add `erlang_ds` to the `plugins` section in to your `rebar.config`:
+
+   ```erlang
+   {plugins, [
+      erlang_ds
+   ]}.
+   ```
+   
+3. Add the provider hook to your `rebar.config`:
+
+   ```erlang
+   {provider_hooks, [
+      {pre, [
+         {compile, {ds_syntax, arrow}}
+      ]}
+   ]}.
+   ```
+   Please note that the `arrow` mentioned above is in reference to the use of
+   `->`.  Some other variants may be added in the future, depending on user
+   interest.
+
+4. Recompile your code:
+
+   ```bash
+   rebar3 compile
+   ```
+
+5. Profit?
+
+### Experimental!
+
+This syntax plugin is still experimental, and I probably don't need to say it, but language purists will not like this.
+
+But if you do decide to use it, here are some important points to note:
+
+* The syntax for retrieving a single value is: `Obj->Key`. `Key` can  be a
+  Variable, String, Binary, Tuple, or an expression wrapped in parentheses.
+* The syntax for retrieving a list of values is: `Obj->[Key1, Key2, ...]`, in
+  this case, `KeyX` can be any expression.
+* In *both* expressions above `Obj` must be a variable. If `Obj` is anything
+  but a variable, it will not trigger the tokenizer and you'll be presented
+  with an error calling out an illegally placed `->`.
+* You may have noticed that the decision to use `get` or `get_list` is the
+  presence of a bracket (`[`) immediately after an arrow (`->`). if you want to retrieve
+  a value where its key is something like `[a,b,c]`, you'll need to bind it to
+  a variable first.  For example: `Obj->[a,b,c]` is equivalent to
+  `ds:get_list(Obj, [a,b,c]])`, but `Key=[a,b,c], Obj->Key` is equivalent to
+  `Key=[a,b,c], ds:get(Obj, Key)`.
+* A `string`, however, (despite being internally represented as a list of
+  integers) does not trigger this difference because the Erlang scanner
+  specifically tokenizes strings as their own thing. As a result: `Obj->"some
+  string key"` is perfectly acceptable, and translates to `ds:get(Obj, "some
+  string key")`.
+
+### Examples
+
+Here are a handful of examples (with the equivalent `ds` calls)
+
+```erlang
+Obj->a,         % ds:get(Obj, a)
+Obj->A,         % ds:get(Obj, A)
+Obj->{a,b},     % ds:get(Obj, {a,b}),
+Obj->"key",     % ds:get(Obj, "key"),
+(Obj)->a,       % error: left-hand-side of -> must be a variable
+(#{})->a,       % error left-hand-side of -> must be a variable
+Obj->f(),       % ds:get(Obj, f)()
+                %   more readable version: Fun = ds:get(Obj, f),
+                                           Fun().
+Obj->(f()),     % ds:get(Obj, f())
+Obj->(m:f()),   % ds:get(Obj, m:f())
+Obj->m:f(),     % ds:get(Obj, m):f()  probably not what you intend.
+Obj->a->b,      % error. Will translate to ds:get(Obj, a)->b, then will
+                %   throw an error because the left-hand-side of -> is
+                %   not a variable.
+
+Obj->[a],       % ds:get_list(Obj, [a]),
+Obj->[a,b],     % ds:get_list(Obj, [a,b]),
+Obj->[m:f()],   % ds:get_list(Obj, [m:f()]),
+Obj->["key"],   % ds:get_list(Obj, ["key"]),
+Obj->[[a,b]],   % ds:get_list(Obj, [[a,b]]).
+Obj->([a,b]).   % ds:get(Obj, [a,b]), %% notice the () around the list tells
+                %   the parser that you're getting a single value
+```
+
+### How does the syntax plugin work?
+
+The parse transform powering it isn't actually a parse transform.  Instead,
+the plugin hijacks the parser and does an initial pass over the tokens looking
+for a number of specific patterns. The `parse_transform` itself just indicates
+to the parser then to parse it with the `ds_syntax` plugin.
+
+### Known Limitations of the syntax plugin
+
+Aside from the restrictions above, a current known limitation is that there is
+not currently any support for setting values with the syntax plugin. This will
+likely be changed in the near future, but currently, there is no `setting`
+mechanism for it.
+
 ## Origins & Philosophy
 
 Erlang DS emerged from the need for a unified module with concise function
@@ -375,6 +507,6 @@ today.
 
 Author: [Jesse Gumm](https://jessegumm.com)
 
-Copyright 2013-2023, Jesse Gumm
+Copyright 2013-2024, Jesse Gumm
 
 [MIT License](https://github.com/choptastic/erlang_ds/blob/master/LICENSE.md)

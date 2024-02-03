@@ -3,6 +3,8 @@
 ## 0.4.0 (In progress)
 
 * Added `foreach/2` (Thanks @davidcaos)
+* Added an optional syntax parse_transform and plugin to allow arrow syntax:
+  `DS->a` = `ds:get(DS, a)`, `DS->[a,b,c]` = `ds:get_list(DS, [a,b,c])`
 
 ## 0.3.0
 
