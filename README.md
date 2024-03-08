@@ -349,7 +349,7 @@ And define the following functions:
 ]}.
 ```
 
-## Adding the SyntPlugin
+## Adding the Syntax Plugin
 
 
 If you want to add Erlang DS's syntax customizations to your app, doing so is very easy:
