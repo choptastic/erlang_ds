@@ -37,22 +37,51 @@ log_file(Msg, Args) ->
     FullMsg = io_lib:format(Msg, Args),
     log_file(FullMsg).
 
+%% This function gets called by the ds_syntax plugin for each module that it
+%% compiles.  But this has an initialization checker using persistent_term so
+%% once its initialized, it doesn't have to initialize again.
 init() ->
     case is_initialized() of
         false ->
             log("Initializing Syntax Parse Transform"),
             log("Hijacking erl_parse:parse_form/1"),
+
+            %% Create a new erl_parse module that won't unload (no_link), is
+            %% allowed to replace a system module (unstick), and retains the
+            %% original functionality of the original (passthrough)
             meck:new(erl_parse, [no_link, unstick, passthrough]),
+
+            %% Now w're going to rewrite erl_parse:parse_form/1 to look for the
+            %% ds_syntax parse transform, and if it's found in the module being
+            %% parsed, convert the arrows and brackets
             meck:expect(erl_parse, parse_form, fun(Tokens) ->
-                save_tokens(Tokens),
+                %% For debugging purposes, this just saves the tokens term to
+                %% /tmp/tokens.erl so it can be inspected in the event of a
+                %% crash or whatever. (You know, the things you do debugging
+                %% for).
+                %%save_tokens(Tokens),
+
+                %% If the module has as -file attribute, we need to track that here.
                 maybe_update_filename(Tokens),
+
+                %% If the module has the ds_syntax parse transform, let's do some magic
                 case is_pt_enabled(Tokens) of
                     true ->
                         %log_file("Preprocessing Arrow Syntax"),
+
+                        %% Preprocess the for the relevant arrow tokens.
                         Tokens2 = ?MODULE:arrow(Tokens),
+                        
+                        %% Then run the original erl_parse:parse_form.
+                        %% meck:passthrough/1 is meck's function to "call the
+                        %% rest of the function you hijacked".  It's quite
+                        %% clever, and my hat is off to @eproxus
                         meck:passthrough([Tokens2]);
                     false ->
                         %log_file("Skipping Arrow Syntax for ~p", [Tokens]),
+
+                        %% No parse-transform found, so just go straight to
+                        %% calling the original erl_parse:parse_form.
                         meck:passthrough([Tokens])
                 end
             end),
