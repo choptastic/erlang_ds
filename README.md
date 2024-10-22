@@ -354,7 +354,7 @@ And define the following functions:
 
 If you want to add Erlang DS's syntax customizations to your app, doing so is very easy:
 
-1. Add the following line to your somewhere above your function definitions:
+1. Add the following line to your code somewhere **above** your function definitions:
 
    ```erlang
    -compile({parse_transform, ds_syntax}).
@@ -448,14 +448,16 @@ Obj->([a,b]).   % ds:get(Obj, [a,b]), %% notice the () around the list tells
 
 The parse transform powering it isn't actually a parse transform.  Instead,
 the plugin hijacks the parser and does an initial pass over the tokens looking
-for a number of specific patterns. The `parse_transform` itself just indicates
-to the parser then to parse it with the `ds_syntax` plugin.
+for the relevant expressions involving the tokens above (currently `->`). The
+presence of `-compile({parse_transform, ds_syntax})` in the module, simply
+indicates to the (now-hijacked) parser that it needs to be preparsed with
+the `ds_syntax` plugin and then actually perform the proper parsing.
 
 ### Known Limitations of the syntax plugin
 
 Aside from the restrictions above, a current known limitation is that there is
-not currently any support for setting values with the syntax plugin. This will
-likely be changed in the near future, but currently, there is no `setting`
+not currently any support for **setting** values with the syntax plugin. This
+will likely be changed in the near future, but currently, there is no `setting`
 mechanism for it.
 
 ## Origins & Philosophy
