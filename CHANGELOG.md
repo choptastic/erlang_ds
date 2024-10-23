@@ -1,6 +1,6 @@
 # Erlang DS Changelog
 
-## 0.4.0 (In progress)
+## 0.4.0
 
 * Added `foreach/2` (Thanks @davidcaos)
 * Added an optional syntax parse_transform and plugin to allow arrow syntax:
