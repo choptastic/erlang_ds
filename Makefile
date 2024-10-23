@@ -12,6 +12,8 @@ include rebar3.mk
 
 test: rebar3
 	$(REBAR) eunit
+	@(cd example_ds_app; \
+	  $(REBAR) shell --eval "ds_syntax_test:go(), halt()." && echo "All DS Syntax Plugin Tests Passed")
 
 dialyzer: rebar3
 	$(REBAR) dialyzer

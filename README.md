@@ -423,15 +423,17 @@ Obj->a,         % ds:get(Obj, a)
 Obj->A,         % ds:get(Obj, A)
 Obj->{a,b},     % ds:get(Obj, {a,b}),
 Obj->"key",     % ds:get(Obj, "key"),
-(Obj)->a,       % error: left-hand-side of -> must be a variable
-(#{})->a,       % error left-hand-side of -> must be a variable
+(Obj)->a,       % ERROR: left-hand-side (LHS) of -> MUST be a variable. Even a
+                %   parenthetical expression on the LHS will break it.
+#{}->a,         % ERROR: left-hand-side of -> MUST be a variable
+(#{})->a,       % ERROR: left-hand-side of -> MUST be a variable
 Obj->f(),       % ds:get(Obj, f)()
                 %   more readable version: Fun = ds:get(Obj, f),
                                            Fun().
 Obj->(f()),     % ds:get(Obj, f())
 Obj->(m:f()),   % ds:get(Obj, m:f())
 Obj->m:f(),     % ds:get(Obj, m):f()  probably not what you intend.
-Obj->a->b,      % error. Will translate to ds:get(Obj, a)->b, then will
+Obj->a->b,      % ERROR: Will translate to ds:get(Obj, a)->b, then will
                 %   throw an error because the left-hand-side of -> is
                 %   not a variable.
 
