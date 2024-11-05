@@ -67,8 +67,9 @@ And these two calls are equivalent:
 [A,B,C] = ds:get_list(Obj, [key1, key2, key3]).
 ```
 
-For more information, see the "Adding the Syntax Plugin" section at the bottom
-of this page. Please note this functionality is *experimental*.
+For more information, see the [Adding the Syntax
+Plugin](#adding-the-syntax-plugin) section at the bottom of this page. Please
+note this functionality is *experimental*.
 
 ## Function Reference
 
