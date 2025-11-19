@@ -46,6 +46,18 @@ go() ->
                 [45] = PL->[c]
         end
     end)(),
+
+    %% Testing that it doesn't incorrectly mark the X-> as a lookup
+    X = 1,
+    case true of
+        true when X==X->
+            ok
+    end,
+
+%    Y = Y,
+%    if
+%        Y==Y-> ok
+%    end,
     
     ok.
 

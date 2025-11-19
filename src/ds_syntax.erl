@@ -257,14 +257,35 @@ arrow([V={var, Anno, _}, {'->', _} | Rest]) ->
         {')', Anno}
     ]),
     NewExpr ++ arrow(NewRest);
+arrow([H = {'when',_}|Rest]) ->
+    {Captured, NewRest} = capture_until('->', [H], Rest),
+    %% Captured here will be the whole 'when' expression (from 'when' to '->').
+    %% and since non-BIFs can't be called in guards, we will skip those altogether.
+    Captured ++ arrow(NewRest);
+    
 arrow([H|T]) ->
     ?pr(ignoring_head, H),
     [H | arrow(T)];
 arrow(X) ->
-    ?pr(ignoring, X),
+    ?pr(ignoring_end_of_list, X),
     X.
 
+%% Here, we're looking for the provided token (usually '->'). When it's
+%% encountered, we return everything we've captured up until that point (hence,
+%% why Token is repeated).
+capture_until(Token, Captured, [H={Token,_}|T]) ->
+    {Captured ++ [H], T};
+%% We didn't find token, so just capture H and tack it to the list. I'm not
+%% terrible concerned about performance here, so using ++ instead of prepending
+%% then reversing is fine
+capture_until(Token, Captured, [H|T]) ->
+    capture_until(Token, Captured ++ [H], T);
+%% We've reached the end of the file. There is very likely a syntax error, so we'll just return the whole captured term and leave it like that.
+capture_until(_Token, Captured, []) ->
+    {Captured, []}.
 
+
+%% TODO: This likely needs to be reworked to be sort of a stack-based parser (specifically to handle 'if' expressions).
 capture_rest_of_expr(none, Captured, T=[{Tok,_}|_]) when Tok==',';
                                                              Tok==';';
                                                              Tok=='end';
