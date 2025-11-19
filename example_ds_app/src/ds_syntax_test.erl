@@ -34,6 +34,18 @@ go() ->
     ["whatever"] = DS->["string"],
     [{tuple_value}] = DS->[{tuple}],
     [{tuple_value}, "whatever"] = DS->[{tuple}, "string"],
+    F1 = fun() ->
+        10 = DS->b,
+        4 = PL->a
+    end,
+    F1(),
+    (fun() ->
+        case true of
+            true ->
+                10 = DS->b,
+                [45] = PL->[c]
+        end
+    end)(),
     
     ok.
 

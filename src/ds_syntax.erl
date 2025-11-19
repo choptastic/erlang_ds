@@ -15,11 +15,14 @@
 -dialyzer({nowarn_function, log_file/1}).
 -dialyzer({nowarn_function, log_file/2}).
 
+-define(debug_parser, true).
+
 -ifdef(debug_parser).
 -define(pr(CT, H), io:format("(L#: ~p) (CT: ~p) ~p = ~p~n", [?LINE, CT, ??H, H])).
 -else.
 -define(pr(CT, H), ok).
 -endif.
+
 
 
 log(Msg) ->
@@ -59,7 +62,7 @@ init() ->
                 %% /tmp/tokens.erl so it can be inspected in the event of a
                 %% crash or whatever. (You know, the things you do debugging
                 %% for).
-                %%save_tokens(Tokens),
+                save_tokens(Tokens),
 
                 %% If the module has as -file attribute, we need to track that here.
                 maybe_update_filename(Tokens),
@@ -71,6 +74,8 @@ init() ->
 
                         %% Preprocess the for the relevant arrow tokens.
                         Tokens2 = ?MODULE:arrow(Tokens),
+                        save_tokens(Tokens2),
+
                         
                         %% Then run the original erl_parse:parse_form.
                         %% meck:passthrough/1 is meck's function to "call the
@@ -221,19 +226,26 @@ bracket([V={var, Anno, _}, {'[',_}, Key, {']', _} | Rest]) ->
     NewExpr ++ bracket(Rest);
 bracket([H|T]) ->
     [H | bracket(T)];
-bracket([]) ->
-    [].
+%bracket(Tuple) when is_tuple(Tuple) ->
+%    List = tuple_to_list(Tuple) ->
+bracket(X) ->
+    X.
+%bracket([]) ->
+%    [].
 
 save_tokens(Tokens) ->
+    io:format("Writing Tokens to /tmp/tokens.erl~n"),
     file:write_file("/tmp/tokens.erl", io_lib:format("~p",[Tokens])).
 
 arrow([V={var, Anno, _}, {'->', _} | Rest]) ->
     {Captured, NewRest} = capture_rest_of_expr(none, [], Rest),
+    ?pr(captured, Captured),
     GetFun = case hd(Captured) of
-        {'[', _} -> get_list;
+        {'[', _} -> 
+            get_list;
         _ -> get
     end,
-    %io:format("Captured: ~p~n",[Captured]),
+    io:format("Captured: ~p~n",[Captured]),
     NewExpr = lists:flatten([
         {atom, Anno, 'ds'},
         {':', Anno},
@@ -246,16 +258,19 @@ arrow([V={var, Anno, _}, {'->', _} | Rest]) ->
     ]),
     NewExpr ++ arrow(NewRest);
 arrow([H|T]) ->
+    ?pr(ignoring_head, H),
     [H | arrow(T)];
-arrow([]) ->
-    [].
+arrow(X) ->
+    ?pr(ignoring, X),
+    X.
 
 
-capture_rest_of_expr(none, Captured, T=[{',',_}|_]) ->
-    ?pr(none, ','),
-    {Captured, T};
-capture_rest_of_expr(none, Captured, T=[{';',_}|_]) ->
-    ?pr(none, ';'),
+capture_rest_of_expr(none, Captured, T=[{Tok,_}|_]) when Tok==',';
+                                                             Tok==';';
+                                                             Tok=='end';
+                                                             Tok=='after';
+                                                             Tok=='catch' ->
+    ?pr(none, Tok),
     {Captured, T};
 capture_rest_of_expr(_CaptureType, Captured, T=[{'dot',_}|_]) ->
     ?pr(none, '.'),
@@ -281,7 +296,15 @@ capture_rest_of_expr(none, Captured, [H={AorV, _Anno, _}|Rest]) when AorV=='atom
     ?pr(none, [H]),
     {Captured ++ [H], Rest};
 
-
+capture_rest_of_expr(CaptureType, Captured, [H={Tok,_}|T]) when Tok=='fun';
+                                                                Tok=='case';
+                                                                Tok=='begin';
+                                                                Tok=='if';
+                                                                Tok=='try';
+                                                                Tok=='receive' ->
+    ?pr(CaptureType, [H]),
+    {NewCaptured, T2} = capture_rest_of_expr('looking_for_end', Captured ++ [H], T),
+    capture_rest_of_expr(CaptureType, NewCaptured, T2);
 capture_rest_of_expr(CaptureType, Captured, [H={'(',_}|T]) ->
     ?pr(CaptureType, [H]),
     {NewCaptured, T2} = capture_rest_of_expr(paren, Captured ++ [H], T),
@@ -295,6 +318,7 @@ capture_rest_of_expr(CaptureType, Captured, [H={'{',_}|T]) ->
     {NewCaptured, T2} = capture_rest_of_expr(curly, Captured ++ [H], T),
     capture_rest_of_expr(CaptureType, NewCaptured, T2);
 
+    
 capture_rest_of_expr(paren, Captured, [H={')',_}|T]) ->
     ?pr(paren, [H]),
     {Captured ++ [H], T};
@@ -303,6 +327,9 @@ capture_rest_of_expr(square, Captured, [H={']',_}|T]) ->
     {Captured ++ [H], T};
 capture_rest_of_expr(curly, Captured, [H={'}',_}|T]) ->
     ?pr(curly, [H]),
+    {Captured ++ [H], T};
+capture_rest_of_expr('looking_for_end', Captured, [H={'end',_} | T]) ->
+    ?pr('looking_for_end', [H]),
     {Captured ++ [H], T};
 capture_rest_of_expr(CaptureType, Captured, [H|T]) when CaptureType=/=none ->
     ?pr(CaptureType, [H]),
