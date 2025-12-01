@@ -1,5 +1,6 @@
 -module(ds_syntax_test).
 -compile({parse_transform, ds_syntax}).
+-compile(nowarn_nomatch).
 
 -export([go/0, to_atom/1, call_that_returns_d/0]).
 
@@ -50,15 +51,57 @@ go() ->
     %% Testing that it doesn't incorrectly mark the X-> as a lookup
     X = 1,
     case true of
+        false -> ok;
+        false when X==X -> ok;
         true when X==X->
             ok
     end,
 
-%    Y = Y,
-%    if
-%        Y==Y-> ok
-%    end,
-    
+    %% Same as above but with If Expressions
+    Y = 2,
+    if
+        X==Y -> ok;
+        Y==Y -> ok
+    end,
+
+    %% testing it doesn't incorrectly mark X -> in receive block
+    W = receive
+        nothing -> ok;
+        _WW -> b
+    after 10 ->
+        c
+    end,
+    io:format("W val: ~p",[W]),
+    W = c,
+
+    %% testing it doesn't incorrectly mark X -> in receive block
+    J = receive
+        nothing -> ok;
+        _JJ -> DS->b
+    after 10 ->
+        DS->c
+    end,
+    J = DS->c,
+
+    %% testing that it doesn't crash when looking up inside an if statement
+    Z = if
+        X==X -> DS->b
+    end,
+    10 = Z,
+
+    %% TODO: this is currently failing
+    case x of
+        _K -> x
+    end,
+
+    %% More of it
+    case x of
+        K ->
+            if
+                x==K->
+                    DS->c
+            end
+    end,
     ok.
 
 to_atom(X) ->

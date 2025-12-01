@@ -40,6 +40,22 @@ log_file(Msg, Args) ->
     FullMsg = io_lib:format(Msg, Args),
     log_file(FullMsg).
 
+run_id() ->
+    {Y,M,D} = date(),
+    {H,Mi,S} =  time(),
+    lists:flatten(io_lib:format("~p-~p-~p.~p-~p-~p", [Y,M,D,H,Mi,S])).
+
+timestamp() ->
+    {_MS, S, Us} = os:timestamp(),
+    Timestamp = S*1000 + Us,
+    lists:flatten(io_lib:format("~p", [Timestamp])).
+
+
+filename(Prefix) ->
+    %"/tmp/tokens.erl".
+    lists:flatten(["/tmp/tokens-",Prefix,"-",run_id(),".",timestamp(),".erl"]).
+
+
 %% This function gets called by the ds_syntax plugin for each module that it
 %% compiles.  But this has an initialization checker using persistent_term so
 %% once its initialized, it doesn't have to initialize again.
@@ -62,7 +78,7 @@ init() ->
                 %% /tmp/tokens.erl so it can be inspected in the event of a
                 %% crash or whatever. (You know, the things you do debugging
                 %% for).
-                save_tokens(Tokens),
+                save_tokens("orig", Tokens),
 
                 %% If the module has as -file attribute, we need to track that here.
                 maybe_update_filename(Tokens),
@@ -74,7 +90,12 @@ init() ->
 
                         %% Preprocess the for the relevant arrow tokens.
                         Tokens2 = ?MODULE:arrow(Tokens),
-                        save_tokens(Tokens2),
+                        case Tokens/=Tokens2 of
+                            true ->
+                                save_tokens("changed", Tokens2);
+                            false ->
+                                ok
+                        end,
 
                         
                         %% Then run the original erl_parse:parse_form.
@@ -233,12 +254,72 @@ bracket(X) ->
 %bracket([]) ->
 %    [].
 
-save_tokens(Tokens) ->
-    io:format("Writing Tokens to /tmp/tokens.erl~n"),
-    file:write_file("/tmp/tokens.erl", io_lib:format("~p",[Tokens])).
+save_tokens(Prefix,Tokens) ->
+    FN = filename(Prefix),
+    io:format("Writing Tokens to ~p~n", [FN]),
+    file:write_file(FN, io_lib:format("~p",[Tokens])).
 
-arrow([V={var, Anno, _}, {'->', _} | Rest]) ->
-    {Captured, NewRest} = capture_rest_of_expr(none, [], Rest),
+arrow(Tokens) ->
+    arrow([], Tokens).
+
+arrow(Stack, [V={var, _, _}, {'->', _} | Rest]) -> %when Stack==[];
+                                                   %  hd(Stack)=/='if' ->
+    ?pr(var_equals, V),
+    {NewExpr, NewRest} = replace_arrow_arg(V, Rest),
+    NewExpr ++ arrow(Stack, NewRest);
+arrow(Stack, [H={Tok,_}|Rest]) when Tok=='if';
+                                    Tok=='receive';
+                                    Tok=='case';
+                                    Tok=='try' ->
+    NewStack = [Tok | Stack],
+    ?pr(stack, NewStack),
+    {Guard, NewRest} = capture_until('->', [], Rest),
+    [H] ++ Guard ++ arrow(NewStack, NewRest);
+arrow(Stack, [H = {'->', _}| Rest]) ->
+    ?pr(arrow_no_update, ""),
+    [H] ++ arrow(Stack, Rest);
+arrow(Stack = [Block | _], [H = {';', _}| Rest]) when Block=='if';
+                                                      Block=='receive';
+                                                      Block=='case';
+                                                      Block=='try' ->
+    ?pr(end_of_clause, ""),
+    {Guard, NewRest} = capture_until('->', [], Rest),
+    [H] ++ Guard ++ arrow(Stack, NewRest);
+arrow(Stack = ['receive' | _], [H = {'after', _} | Rest]) ->
+    {Guard, NewRest} = capture_until('->', [], Rest),
+    ?pr(receive_after, Guard),
+    [H] ++ Guard ++ arrow(Stack, NewRest);
+arrow(Stack, [H = {Tok, _} | Rest]) when Tok=='try';
+                                         Tok=='case';
+                                         Tok=='fun';
+                                         Tok=='receive';
+                                         Tok=='begin' ->
+    NewStack = [Tok | Stack],
+    ?pr(stack, NewStack),
+    [H] ++ arrow(NewStack, Rest);
+arrow([Block | NewStack], [H = {'end', _} | Rest]) when Block=='if';
+                                                      Block=='try';
+                                                      Block=='case';
+                                                      Block=='begin';
+                                                      Block=='receive';
+                                                      Block=='fun'->
+    ?pr(encountered_end, NewStack),
+    [H] ++ arrow(NewStack, Rest);
+arrow(Stack, [H = {'when',_}|Rest]) ->
+    {Captured, NewRest} = capture_until('->', [H], Rest),
+    ?pr(when_clause, Captured),
+    %% Captured here will be the whole 'when' expression (from 'when' to '->').
+    %% and since non-BIFs can't be called in guards, we will skip those altogether.
+    Captured ++ arrow(Stack, NewRest);
+arrow(Stack, [H|T]) ->
+    ?pr(ignoring_head, H),
+    [H | arrow(Stack, T)];
+arrow(_Stack, X) ->
+    ?pr(ignoring_end_of_list, X),
+    X.
+
+replace_arrow_arg(V = {var, Anno, _}, Tokens) ->
+    {Captured, NewRest} = capture_rest_of_expr(none, [], Tokens),
     ?pr(captured, Captured),
     GetFun = case hd(Captured) of
         {'[', _} -> 
@@ -256,19 +337,7 @@ arrow([V={var, Anno, _}, {'->', _} | Rest]) ->
         Captured,
         {')', Anno}
     ]),
-    NewExpr ++ arrow(NewRest);
-arrow([H = {'when',_}|Rest]) ->
-    {Captured, NewRest} = capture_until('->', [H], Rest),
-    %% Captured here will be the whole 'when' expression (from 'when' to '->').
-    %% and since non-BIFs can't be called in guards, we will skip those altogether.
-    Captured ++ arrow(NewRest);
-    
-arrow([H|T]) ->
-    ?pr(ignoring_head, H),
-    [H | arrow(T)];
-arrow(X) ->
-    ?pr(ignoring_end_of_list, X),
-    X.
+    {NewExpr, NewRest}.
 
 %% Here, we're looking for the provided token (usually '->'). When it's
 %% encountered, we return everything we've captured up until that point (hence,
@@ -285,7 +354,7 @@ capture_until(_Token, Captured, []) ->
     {Captured, []}.
 
 
-%% TODO: This likely needs to be reworked to be sort of a stack-based parser (specifically to handle 'if' expressions).
+
 capture_rest_of_expr(none, Captured, T=[{Tok,_}|_]) when Tok==',';
                                                              Tok==';';
                                                              Tok=='end';
