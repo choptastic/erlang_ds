@@ -10,20 +10,24 @@
 -compile({nowarn_unused_function, log/2}).
 -compile({nowarn_unused_function, log_file/1}).
 -compile({nowarn_unused_function, log_file/2}).
+-compile({nowarn_unused_function, run_id/0}).
+-compile({nowarn_unused_function, timestamp/0}).
+-compile({nowarn_unused_function, filename/1}).
 -dialyzer({nowarn_function, log/1}).
 -dialyzer({nowarn_function, log/2}).
 -dialyzer({nowarn_function, log_file/1}).
 -dialyzer({nowarn_function, log_file/2}).
+-dialyzer({nowarn_function, run_id/0}).
+-dialyzer({nowarn_function, timestamp/0}).
+-dialyzer({nowarn_function, filename/1}).
 
--define(debug_parser, true).
+%-define(debug_parser, true).
 
 -ifdef(debug_parser).
 -define(pr(CT, H), io:format("(L#: ~p) (CT: ~p) ~p = ~p~n", [?LINE, CT, ??H, H])).
 -else.
 -define(pr(CT, H), ok).
 -endif.
-
-
 
 log(Msg) ->
     io:format(["Erlang DS: ", Msg, "\n"]).
@@ -254,10 +258,16 @@ bracket(X) ->
 %bracket([]) ->
 %    [].
 
+-ifdef(debug_parser).
 save_tokens(Prefix,Tokens) ->
     FN = filename(Prefix),
     io:format("Writing Tokens to ~p~n", [FN]),
     file:write_file(FN, io_lib:format("~p",[Tokens])).
+-else.
+save_tokens(_, _) ->
+    ok.
+-endif.
+
 
 arrow(Tokens) ->
     arrow([], Tokens).
@@ -326,7 +336,6 @@ replace_arrow_arg(V = {var, Anno, _}, Tokens) ->
             get_list;
         _ -> get
     end,
-    io:format("Captured: ~p~n",[Captured]),
     NewExpr = lists:flatten([
         {atom, Anno, 'ds'},
         {':', Anno},

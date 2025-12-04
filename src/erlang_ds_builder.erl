@@ -23,7 +23,7 @@ build() ->
         undefined ->
             U = default_updaters(),
             application:set_env(erlang_ds, updaters, U),
-            logger:notice("Erlang DS: No updaters defined in the application config.~nUsing the default: ~p",[U]),
+            logger:info("Erlang DS: No updaters defined in the application config.~nUsing the default: ~p",[U]),
             U
     end,
 
@@ -33,14 +33,14 @@ build() ->
         undefined ->
             T = default_type_modules(),
             application:set_env(erlang_ds, type_handlers, T),
-            logger:notice("Erlang DS: No type_handlers defined in the application config.~nUsing the default: ~p",[T]),
+            logger:info("Erlang DS: No type_handlers defined in the application config.~nUsing the default: ~p",[T]),
             T
     end,
     Updaters = ds_util:normalize_updaters(Updaters0),
     TypeModules = verify_type_handlers(TypeModules0),
-    logger:notice("Erlang DS: Generating and building erlang_ds_lookup..."),
+    logger:info("Erlang DS: Generating and building erlang_ds_lookup..."),
     {Time, _} = timer:tc(fun() -> build(Updaters, TypeModules) end),
-    logger:notice("Erlang: DS: erlang_ds_lookup built in ~p ms", [Time div 1000]).
+    logger:info("Erlang: DS: erlang_ds_lookup built in ~p ms", [Time div 1000]).
 
 verify_type_handlers(Ts) ->
     Good = lists:all(fun(T) -> is_atom(T) end, Ts),
