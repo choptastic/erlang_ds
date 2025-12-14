@@ -4,7 +4,13 @@
 -module(ds_syntax).
 
 %% API exports
--export([parse_transform/2, init/0, arrow/1, bracket/1, is_initialized/0]).
+-export([
+    parse_transform/2,
+    init/0,
+    arrow/1,
+    bracket/1,
+    is_initialized/0
+]).
 
 -compile({nowarn_unused_function, log/1}).
 -compile({nowarn_unused_function, log/2}).
@@ -20,6 +26,7 @@
 -dialyzer({nowarn_function, run_id/0}).
 -dialyzer({nowarn_function, timestamp/0}).
 -dialyzer({nowarn_function, filename/1}).
+-dialyzer({nowarn_function, set_initialized/0}).
 
 %-define(debug_parser, true).
 

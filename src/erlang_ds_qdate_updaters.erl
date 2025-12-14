@@ -1,4 +1,5 @@
 -module(erlang_ds_qdate_updaters).
+-dialyzer(no_unknown).
 -export([
     register_updaters/0,
     unregister_updaters/0
