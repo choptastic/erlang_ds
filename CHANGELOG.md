@@ -1,5 +1,9 @@
 # Erlang DS Changelog
 
+## 0.4.2
+
+* Fix some crashes in the `ds_syntax` parse transform.
+
 ## 0.4.1
 
 * Add the syntax tests to the `Makefile` for easier testing of the syntax
