@@ -71,7 +71,6 @@ go() ->
     after 10 ->
         c
     end,
-    io:format("W val: ~p",[W]),
     W = c,
 
     %% testing it doesn't incorrectly mark X -> in receive block
@@ -89,12 +88,12 @@ go() ->
     end,
     10 = Z,
 
-    %% TODO: this is currently failing
+    %% Testing case of Var -> x is regocnized as a proper syntax line
     case x of
         _K -> x
     end,
 
-    %% More of it
+    %% More of nesting
     case x of
         K ->
             if
