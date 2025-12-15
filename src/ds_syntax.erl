@@ -28,7 +28,7 @@
 -dialyzer({nowarn_function, filename/1}).
 -dialyzer({nowarn_function, set_initialized/0}).
 
--define(debug_parser, true).
+%-define(debug_parser, true).
 
 -ifdef(debug_parser).
 -define(pr(CT, H), io:format("(L#: ~p) (CT: ~p) ~p = ~p~n", [?LINE, CT, ??H, H])).
