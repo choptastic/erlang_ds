@@ -11,7 +11,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04, ubuntu-22.04, ubuntu-24.04]
         otp_version: ['25.x', '26.x', '27.x', '28.x']
-        rebar3_version: ["3.24.0", "3.25.1"]
+        rebar3_version: ["3.24.0"]
 
     steps:
       - name: Install OTP ${{matrix.otp_version}}
