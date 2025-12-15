@@ -11,7 +11,7 @@ jobs:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04]
         otp_version: ['25.x', '26.x', '27.x', '28.x']
-        rebar3_version: ["3.24.0"]
+        rebar3_version: ["3.25.1"]
 
     steps:
       - name: Install OTP ${{matrix.otp_version}}
@@ -24,8 +24,9 @@ jobs:
       - name: Checkout Erlang DS
         uses: actions/checkout@v3
 
+      - name: Run Dialyzer
+        run: make dialyzer
+
       - name: Test Everything
         run: make test
 
-      - name: Run Dialyzer
-        run: make dialyzer
