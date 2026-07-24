@@ -1,5 +1,10 @@
 # Erlang DS Changelog
 
+## 0.4.3
+
+- Meck dependency to version 1.2.0
+- Add OTP29 support
+
 ## 0.4.2
 
 - Fix some crashes in the `ds_syntax` parse transform.
