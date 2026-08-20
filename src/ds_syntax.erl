@@ -1,4 +1,4 @@
-%% Copyright 2024 Jesse Gumm
+%% Copyright 2024-2026 Jesse Gumm
 %% MIT LICENSE
 
 -module(ds_syntax).
@@ -64,7 +64,7 @@ timestamp() ->
 
 filename(Prefix) ->
     %"/tmp/tokens.erl".
-    lists:flatten(["/tmp/tokens-",Prefix,"-",run_id(),".",timestamp(),".erl"]).
+    lists:flatten(["/tmp/tokens-",Prefix,"-",run_id(),".erl"]).
 
 
 %% This function gets called by the ds_syntax plugin for each module that it
@@ -91,7 +91,7 @@ init() ->
                 %% for).
                 save_tokens("orig", Tokens),
 
-                %% If the module has as -file attribute, we need to track that here.
+                %% If the module has a -file attribute, we need to track that here.
                 maybe_update_filename(Tokens),
 
                 %% If the module has the ds_syntax parse transform, let's do some magic
@@ -108,7 +108,6 @@ init() ->
                                 ok
                         end,
 
-                        
                         %% Then run the original erl_parse:parse_form.
                         %% meck:passthrough/1 is meck's function to "call the
                         %% rest of the function you hijacked".  It's quite
@@ -138,11 +137,20 @@ set_initialized() ->
 get_filename() ->
     erlang:get(ds_syntax_parse_filename).
 
+set_filename(Filename) ->
+    erlang:put(ds_syntax_parse_filename, Filename).
+
+get_module_filename() ->
+    erlang:get(ds_syntax_parse_module_filename).
+
+set_module_filename(Filename) ->
+    erlang:put(ds_syntax_parse_module_filename, Filename).
+
 maybe_update_filename(Tokens) ->
     case get_file_line(Tokens) of
         undefined -> ok;
         Filename ->
-            put(ds_syntax_parse_filename, Filename),
+            set_filename(Filename),
             ok
             %log_file("Open file")
     end.
@@ -151,7 +159,20 @@ is_pt_enabled(Tokens) ->
     case get_filename() of
         undefined -> false;
         Filename ->
-            case was_pt_enabled_for_this_file(Filename) of
+            ModFilename = case filename:extension(Filename) of
+                ".erl" ->
+                    set_module_filename(Filename),
+                    Filename;
+                ".hrl" ->
+                    set_filename(Filename),
+                    get_module_filename()
+            end,
+
+            %log("~p: ~p", [is_pt_enabled, {ModFilename, Filename}]),
+
+            PTEnabled = was_pt_enabled_for_this_file(Filename) orelse
+                        was_pt_enabled_for_this_file(ModFilename),
+            case PTEnabled of
                 true -> true;
                 false ->
                     %log("Looking for parse transform"),
@@ -159,10 +180,12 @@ is_pt_enabled(Tokens) ->
                         false -> false;
                         true -> 
                             set_pt_enabled_for_this_file(Filename),
+                            set_pt_enabled_for_this_file(ModFilename),
                             true
                     end
             end
     end.
+
 
 was_pt_enabled_for_this_file(Filename) ->
     case get({erlang_ds_file_has_pt, Filename}) of
@@ -188,9 +211,26 @@ has_pt_line([
              {')', _},
              {'dot', _} | _]) ->
     true;
+%has_pt_line([{'-', _},
+%             {atom, _, include},
+%             {'(', _},
+%             {'string', _, Filename},
+%             {')', _},
+%             {'dot', _} | T]) ->
+%    case does_include_have_pt_line(Filename) of
+%        true -> true;
+%        false -> has_pt_line(T)
+%    end;
 has_pt_line([_|T]) ->
     has_pt_line(T).
 
+%does_include_have_pt_line(Filename) ->
+%    Path = filename:join("include", Filename),
+%    {ok, Bin} = file:read_file(Path),
+%    Str = unicode:characters_to_list(Bin),
+%    {ok, Tokens} = erl_scan:string(Str),
+%    ?pr(include_file, Tokens),
+%    has_pt_line(Tokens).
 
 get_file_line([]) ->
     undefined;
@@ -269,7 +309,7 @@ bracket(X) ->
 save_tokens(Prefix,Tokens) ->
     FN = filename(Prefix),
     io:format("Writing Tokens to ~p~n", [FN]),
-    file:write_file(FN, io_lib:format("~p",[Tokens])).
+    file:write_file(FN, io_lib:format("~p~n~n",[Tokens]), [append]).
 -else.
 save_tokens(_, _) ->
     ok.
@@ -424,7 +464,7 @@ capture_rest_of_expr(CaptureType, Captured, [H={'{',_}|T]) ->
     {NewCaptured, T2} = capture_rest_of_expr(curly, Captured ++ [H], T),
     capture_rest_of_expr(CaptureType, NewCaptured, T2);
 
-    
+
 capture_rest_of_expr(paren, Captured, [H={')',_}|T]) ->
     ?pr(paren, [H]),
     {Captured ++ [H], T};

@@ -5,6 +5,7 @@
 -export([go/0, to_atom/1, call_that_returns_d/0]).
 
 go() ->
+    io:format("Testing ds_syntax parse_transform...~n"),
     DS = #{a=>4, b=>10, c=>45, d=>96, "string"=>"whatever", {tuple}=>{tuple_value}},
     PL = maps:to_list(DS),
     C = c,
@@ -101,6 +102,7 @@ go() ->
                     DS->c
             end
     end,
+    io:format("...Standard tests passed.~n"),
     ok.
 
 to_atom(X) ->
