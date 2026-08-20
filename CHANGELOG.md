@@ -1,5 +1,10 @@
 # Erlang DS Changelog
 
+## 0.4.4
+
+- Improve `ds_syntax` to work even if the parse transform attribute is set in
+  an include file.
+
 ## 0.4.3
 
 - Meck dependency to version 1.2.0
